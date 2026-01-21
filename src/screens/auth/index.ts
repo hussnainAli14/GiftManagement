@@ -1,0 +1,9 @@
+export { Welcome } from './Welcome';
+export { Login } from './Login';
+export { SignUp } from './SignUp';
+export { ForgotPassword } from './ForgotPassword';
+export { OTP } from './OTP';
+export { Verify } from './Verify';
+export { ChangePassword } from './ChangePassword';
+export { Success } from './Success';
+export { Preferences } from './Preferences';
