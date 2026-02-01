@@ -113,6 +113,61 @@ export const typography = {
       lineHeight: 21,
       fontWeight: '500' as const,
     },
+    // Font Weight Styles - Base size (16px) with normal line height
+    thin: {
+      fontFamily: 'Inter-Thin',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '100' as const,
+    },
+    extraLight: {
+      fontFamily: 'Inter-ExtraLight',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '200' as const,
+    },
+    light: {
+      fontFamily: 'Inter-Light',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '300' as const,
+    },
+    regular: {
+      fontFamily: 'Inter-Regular',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '400' as const,
+    },
+    medium: {
+      fontFamily: 'Inter-Medium',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '500' as const,
+    },
+    semiBold: {
+      fontFamily: 'Inter-SemiBold',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '600' as const,
+    },
+    bold: {
+      fontFamily: 'Inter-Bold',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '700' as const,
+    },
+    extraBold: {
+      fontFamily: 'Inter-ExtraBold',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '800' as const,
+    },
+    black: {
+      fontFamily: 'Inter-Black',
+      fontSize: 16,
+      lineHeight: 24,
+      fontWeight: '900' as const,
+    },
   },
 };
 

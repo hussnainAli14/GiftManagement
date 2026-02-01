@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
+import { useAuth } from '../../../context/AuthContext';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import type { LoginScreenNavigationProp, LoginFormData } from '../Welcome/types';
+import type { AuthStackParamList, LoginScreenNavigationProp, LoginFormData } from '../Welcome/types';
 
 const Login = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'Login'>>();
+  const { login } = useAuth();
+  const role = route.params?.role ?? 'user';
   const insets = useSafeAreaInsets();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -18,6 +23,7 @@ const Login = () => {
     control,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<LoginFormData>({
     defaultValues: {
       email: '',
@@ -25,9 +31,21 @@ const Login = () => {
     },
   });
 
+  const email = watch('email');
+  const password = watch('password');
+
+  // Check if form is valid
+  const isFormValid = 
+    email.trim() !== '' &&
+    password.trim() !== '' &&
+    /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email) &&
+    password.length >= 6;
+
   const onSubmit = (data: LoginFormData) => {
     console.log('Login data:', data);
-    // Handle login logic here
+    // Mark user as authenticated and switch to Main or Vendor app by role
+    login(role);
+    // TODO: Handle login API and store token when integrated
   };
 
   const handleForgotPassword = () => {
@@ -35,7 +53,7 @@ const Login = () => {
   };
 
   const handleCreateAccount = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('SignUp', { role });
   };
 
   return (
@@ -116,6 +134,7 @@ const Login = () => {
           variant="primary"
           fullWidth
           onPress={handleSubmit(onSubmit)}
+          disabled={!isFormValid}
           style={styles.loginButton}
         >
           Log In

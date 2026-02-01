@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { TouchableOpacityProps, TextStyle, ViewStyle } from 'react-native';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'text';
+export type ButtonVariant = 'primary' | 'secondary' | 'text' | 'primaryPurple' | 'secondaryPurple';
 
 export type ButtonSize = 'small' | 'medium' | 'large';
 

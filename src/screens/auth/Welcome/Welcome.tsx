@@ -13,11 +13,11 @@ const Welcome = () => {
   const insets = useSafeAreaInsets();
 
   const handleLogin = () => {
-    navigation.navigate('Login');
+    navigation.navigate('RoleSelection', { mode: 'login' });
   };
 
   const handleCreateAccount = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate('RoleSelection', { mode: 'signup' });
   };
 
   return (

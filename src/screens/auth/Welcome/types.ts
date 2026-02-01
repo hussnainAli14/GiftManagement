@@ -2,8 +2,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export type AuthStackParamList = {
   Welcome: undefined;
-  Login: undefined;
-  SignUp: undefined;
+  RoleSelection: { mode: 'login' | 'signup' };
+  Login: { role?: 'user' | 'vendor' };
+  SignUp: { role?: 'user' | 'vendor' };
   ForgotPassword: undefined;
   OTP: undefined;
   Verify: undefined;

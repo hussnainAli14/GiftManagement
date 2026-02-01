@@ -51,6 +51,18 @@ export const getButtonStyles = (
           textColor: customText || colors.primary,
           borderColor: customBorder || colors.primary,
         };
+      case 'primaryPurple':
+        return {
+          backgroundColor: customBg || colors.purple,
+          textColor: customText || colors.white,
+          borderColor: customBorder || 'transparent',
+        };
+      case 'secondaryPurple':
+        return {
+          backgroundColor: customBg || colors.white,
+          textColor: customText || colors.purple,
+          borderColor: customBorder || colors.purple,
+        };
       case 'text':
         return {
           backgroundColor: customBg || 'transparent',
@@ -69,10 +81,11 @@ export const getButtonStyles = (
   const variantColors = getVariantColors();
 
   // Base container style
+  const hasBorder = variant === 'secondary' || variant === 'secondaryPurple';
   const containerStyle: ViewStyle = {
     backgroundColor: variantColors.backgroundColor,
     borderColor: variantColors.borderColor,
-    borderWidth: variant === 'secondary' ? (customBorderWidth ?? 1) : 0,
+    borderWidth: hasBorder ? (customBorderWidth ?? 2) : 0,
     borderRadius: customRadius ?? 8,
     paddingVertical: customPaddingV ?? sizePadding[size].vertical,
     paddingHorizontal: customPaddingH ?? sizePadding[size].horizontal,

@@ -1,0 +1,10 @@
+export { default as VendorHome } from './Home/Home';
+export { Dashboard } from './Dashboard';
+export { AddProduct } from './AddProduct';
+export { MyProducts } from './MyProducts';
+export { EditProduct } from './EditProduct';
+export { Users } from './Users';
+export { Vendors } from './Vendors';
+export { Orders } from './Orders';
+export { OrderDetails } from './Orders/OrderDetails';
+export { Reports } from './Reports';
