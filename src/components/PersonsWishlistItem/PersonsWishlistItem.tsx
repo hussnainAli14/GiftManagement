@@ -8,6 +8,7 @@ import { styles } from './styles';
 const PersonsWishlistItem: React.FC<PersonsWishlistItemProps> = ({
   item,
   onPress,
+  showContributed = true,
   style,
 }) => {
   const imageSource =
@@ -24,12 +25,14 @@ const PersonsWishlistItem: React.FC<PersonsWishlistItemProps> = ({
           {item.description}
         </Text>
         <Text style={styles.price}>{item.price}</Text>
-        <View style={styles.progressWrapper}>
-          <ProgressBar
-            progress={item.contributedPercent}
-            label={`${item.contributedPercent}% contributed`}
-          />
-        </View>
+        {showContributed && (
+          <View style={styles.progressWrapper}>
+            <ProgressBar
+              progress={item.contributedPercent}
+              label={`${item.contributedPercent}% contributed`}
+            />
+          </View>
+        )}
       </View>
     </Container>
   );

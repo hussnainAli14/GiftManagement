@@ -4,14 +4,14 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { EventListItem } from '../../../components';
 import type { EventListItemData, EventStatus } from '../../../components/EventListItem';
-import { colors } from '../../../theme';
-import { typography } from '../../../theme';
 import { styles } from './styles';
 
 type EventsStackParamList = {
   EventsMain: undefined;
   PersonsWishlist: { eventTitle?: string };
 };
+
+type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsMain'>;
 
 // Mock data - replace with real API data when integrating
 const allEvents: EventListItemData[] = [
@@ -75,6 +75,7 @@ type FilterTab = EventStatus;
 
 const Events = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('upcoming');
+  const navigation = useNavigation<EventsScreenNavigationProp>();
 
   const counts = useMemo(() => {
     return {

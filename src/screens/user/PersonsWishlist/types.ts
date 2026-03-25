@@ -52,3 +52,42 @@ export const DUMMY_PERSONS_WISHLIST_ITEMS: PersonsWishlistItemData[] = [
     contributedPercent: 75,
   },
 ];
+
+export const DUMMY_NON_WISHLIST_ITEMS: PersonsWishlistItemData[] = [
+  {
+    id: 'n1',
+    title: 'Wireless Bluetooth Speaker',
+    description:
+      'Portable speaker with 360° sound and waterproof design for outdoor use.',
+    price: 'PKR 12,000',
+    image: 'https://picsum.photos/seed/speaker/400/200',
+    contributedPercent: 0,
+  },
+  {
+    id: 'n2',
+    title: 'Leather Wallet',
+    description:
+      'Handcrafted genuine leather wallet with RFID blocking technology.',
+    price: 'PKR 8,500',
+    image: 'https://picsum.photos/seed/wallet/400/200',
+    contributedPercent: 0,
+  },
+  {
+    id: 'n3',
+    title: 'Aromatherapy Diffuser',
+    description:
+      'Ultrasonic essential oil diffuser with LED mood lighting.',
+    price: 'PKR 6,200',
+    image: 'https://picsum.photos/seed/diffuser/400/200',
+    contributedPercent: 0,
+  },
+  {
+    id: 'n4',
+    title: 'Fitness Tracker Band',
+    description:
+      'Lightweight activity tracker with heart rate and sleep monitoring.',
+    price: 'PKR 4,500',
+    image: 'https://picsum.photos/seed/fitness/400/200',
+    contributedPercent: 0,
+  },
+];
