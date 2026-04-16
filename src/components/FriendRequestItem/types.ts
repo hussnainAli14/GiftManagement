@@ -10,6 +10,10 @@ export interface FriendRequest {
   avatar: ImageSourcePropType | string;
   mutualFriendsCount: number;
   type: RequestType;
+  /** Other user's id for profile navigation (requester if incoming, receiver if outgoing). */
+  peerUserId?: string;
+  /** Other user's email when available (for profile screen). */
+  peerEmail?: string;
 }
 
 export interface FriendRequestItemProps {

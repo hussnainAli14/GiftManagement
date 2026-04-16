@@ -1,51 +1,60 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { Text, Image, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Container } from '../Container';
 import { colors } from '../../theme';
-import { typography } from '../../theme';
 import { AddFriendUserItemProps } from './types';
 import { styles } from './styles';
+import { getAvatarImageSource } from '../../utils/resolveUserAvatar';
 
 const AddFriendUserItem: React.FC<AddFriendUserItemProps> = ({
   user,
   onAddFriend,
   onPress,
+  addRequestLoading = false,
   style,
 }) => {
-  const imageSource =
-    typeof user.avatar === 'string'
-      ? { uri: user.avatar }
-      : user.avatar;
-
-  const handleItemPress = () => {
-    onPress?.(user);
-  };
-
-  const handleAddFriendPress = (e: any) => {
-    e?.stopPropagation?.();
-    onAddFriend?.(user);
-  };
+  const imageSource = getAvatarImageSource(user.avatar, user.name);
+  const email = user.email?.trim();
 
   return (
-    <TouchableOpacity
-      onPress={handleItemPress}
-      activeOpacity={0.7}
-      style={style}
-    >
+    <View style={style}>
       <Container style={styles.container}>
-        <Image source={imageSource} style={styles.avatar} />
-        <Text style={styles.name}>{user.name}</Text>
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={handleAddFriendPress}
+          style={styles.leftPressable}
+          onPress={() => onPress?.(user)}
           activeOpacity={0.7}
+          disabled={!onPress}
         >
-          <Icon name="person-add" size={18} color={colors.white} />
-          <Text style={styles.addButtonText}>Add Friend</Text>
+          <Image source={imageSource} style={styles.avatar} />
+          <View style={styles.textColumn}>
+            <Text style={styles.name} numberOfLines={1}>
+              {user.name}
+            </Text>
+            {email ? (
+              <Text style={styles.email} numberOfLines={1}>
+                {email}
+              </Text>
+            ) : null}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.addButton, addRequestLoading && styles.addButtonDisabled]}
+          onPress={() => onAddFriend?.(user)}
+          activeOpacity={0.7}
+          disabled={addRequestLoading}
+        >
+          {addRequestLoading ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <>
+              <Icon name="person-add" size={18} color={colors.white} />
+              <Text style={styles.addButtonText}>Add Friend</Text>
+            </>
+          )}
         </TouchableOpacity>
       </Container>
-    </TouchableOpacity>
+    </View>
   );
 };
 

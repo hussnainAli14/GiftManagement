@@ -1,11 +1,43 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Alert } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BottomTabBar } from '../components';
-import { Home, Events, Friends, Notifications, FriendProfile, AddFriends, CreateEventStep1, CreateEventStep2, WishlistDetail, AddItem, EditItem, PersonsWishlist, GiftOptions, SelectVendor, ConfirmOrder, Payment, OrderConfirmed, ContributionProgress, ContributionSuccess, MyOrders, OrderDetail, Profile, ChangePassword } from '../screens/user';
+import {
+  Home,
+  Events,
+  Friends,
+  Notifications,
+  FriendProfile,
+  AddFriends,
+  CreateEventStep1,
+  CreateEventStep2,
+  WishlistDetail,
+  AddItem,
+  EditItem,
+  PersonsWishlist,
+  GiftOptions,
+  SelectVendor,
+  ConfirmOrder,
+  Payment,
+  OrderConfirmed,
+  ContributionProgress,
+  ContributionSuccess,
+  MyOrders,
+  OrderDetail,
+  Profile,
+  ChangePassword,
+  MyProfile,
+  EditMyProfile,
+  PrivacyPolicy,
+  TermsOfService,
+  MessagesInbox,
+  NewChat,
+  ChatThread,
+} from '../screens/user';
+import type { ChatThreadParams } from './messagingParams';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
 import { colors } from '../theme';
 
@@ -87,7 +119,20 @@ const EventsStack = () => {
           headerLeft: getHeaderBackButton(navigation),
           headerRight: () => (
             <TouchableOpacity
-              onPress={() => navigation.navigate('AddItem')}
+              onPress={() => {
+                const eventId = (route.params as { eventId?: string })?.eventId;
+                Alert.alert('Add Item', 'Where do you want to add this item?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Wishlist',
+                    onPress: () => navigation.navigate('AddItem', { eventId, listType: 'wishlist' }),
+                  },
+                  {
+                    text: 'Non Wishlist',
+                    onPress: () => navigation.navigate('AddItem', { eventId, listType: 'nonWishlist' }),
+                  },
+                ]);
+              }}
               style={{ marginRight: 16 }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -287,6 +332,48 @@ const HomeStack = () => {
         })}
       />
       <Stack.Screen
+        name="MessagesInbox"
+        component={MessagesInbox}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Messages',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NewChat' as never)}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="add" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          ),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="NewChat"
+        component={NewChat}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'New chat',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="ChatThread"
+        component={ChatThread}
+        options={({ navigation, route }) => ({
+          headerShown: true,
+          headerTitle: (route.params as ChatThreadParams)?.peerName ?? 'Chat',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
         name="PersonsWishlist"
         component={PersonsWishlist}
         options={({ navigation, route }) => ({
@@ -306,6 +393,26 @@ const HomeStack = () => {
             </TouchableOpacity>
           ),
           tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="AddItem"
+        component={AddItem}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Add Item',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="EditItem"
+        component={EditItem}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Edit Item',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
         })}
       />
       <Stack.Screen
@@ -434,11 +541,51 @@ const ProfileStack = () => {
         })}
       />
       <Stack.Screen
+        name="MyProfile"
+        component={MyProfile}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'My Profile',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="EditMyProfile"
+        component={EditMyProfile}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Edit Profile',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
         name="ChangePassword"
         component={ChangePassword}
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: 'Change Password',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicy}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Privacy Policy',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="TermsOfService"
+        component={TermsOfService}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Terms of Service',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
@@ -477,6 +624,48 @@ const FriendsStack = () => {
         })}
       />
       <Stack.Screen
+        name="MessagesInbox"
+        component={MessagesInbox}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Messages',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NewChat' as never)}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="add" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          ),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="NewChat"
+        component={NewChat}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'New chat',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="ChatThread"
+        component={ChatThread}
+        options={({ navigation, route }) => ({
+          headerShown: true,
+          headerTitle: (route.params as ChatThreadParams)?.peerName ?? 'Chat',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
         name="FriendProfile"
         component={FriendProfile}
         options={({ navigation, route }) => ({
@@ -486,10 +675,26 @@ const FriendsStack = () => {
           headerLeft: getHeaderBackButton(navigation),
           headerRight: () => (
             <View style={{ flexDirection: 'row', marginRight: 16, gap: 16 }}>
-              <TouchableOpacity>
+              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icon name="more-vert" size={24} color="#000000" />
               </TouchableOpacity>
-              <TouchableOpacity>
+              <TouchableOpacity
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() => {
+                  const p = route.params as {
+                    friendId?: string;
+                    friendName?: string;
+                    friendAvatar?: string;
+                  };
+                  if (p?.friendId) {
+                    navigation.navigate('ChatThread', {
+                      peerUserId: p.friendId,
+                      peerName: p.friendName ?? 'Chat',
+                      peerAvatar: p.friendAvatar,
+                    });
+                  }
+                }}
+              >
                 <Icon name="message" size={24} color="#000000" />
               </TouchableOpacity>
             </View>

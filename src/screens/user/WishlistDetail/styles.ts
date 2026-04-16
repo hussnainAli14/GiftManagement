@@ -7,13 +7,17 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  header: {
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 12,
+  },
   sectionTitle: {
     fontFamily: typography.fontFamily.bold,
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold as '700',
     color: colors.black,
     marginBottom: 16,
-    paddingTop: 16,
   },
   listContent: {
     paddingHorizontal: 24,

@@ -2,6 +2,7 @@ import type { PersonsWishlistItemData } from '../../../components/PersonsWishlis
 
 export type PersonsWishlistParams = {
   eventTitle?: string;
+  eventId?: string;
 };
 
 export const DUMMY_PERSONS_WISHLIST_ITEMS: PersonsWishlistItemData[] = [

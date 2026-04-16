@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import type { ChangePasswordScreenNavigationProp, ChangePasswordFormData } from '../Welcome/types';
+import { resetPasswordApi } from '../../../api/authApi';
+import type { AuthStackParamList, ChangePasswordScreenNavigationProp, ChangePasswordFormData } from '../Welcome/types';
 
 const ChangePassword = () => {
   const navigation = useNavigation<ChangePasswordScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'ChangePassword'>>();
   const insets = useSafeAreaInsets();
   const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     control,
@@ -29,14 +33,24 @@ const ChangePassword = () => {
 
   const newPassword = watch('newPassword');
 
-  const onSubmit = (data: ChangePasswordFormData) => {
+  const onSubmit = async (data: ChangePasswordFormData) => {
     // Check if passwords match
     if (data.newPassword !== data.confirmPassword) {
       return;
     }
-    console.log('Change Password data:', data);
-    // Navigate to Login screen
-    navigation.navigate('Login');
+    try {
+      setIsSubmitting(true);
+      if (!route.params?.email || !route.params?.otp) {
+        throw new Error('Missing email or OTP context. Please retry forgot password flow.');
+      }
+      await resetPasswordApi(route.params.email, route.params.otp, data.newPassword);
+      Alert.alert('Success', 'Password reset successful. Please login.');
+      navigation.navigate('Login', { role: 'user' });
+    } catch (error) {
+      Alert.alert('Reset Failed', error instanceof Error ? error.message : 'Unable to reset password');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,9 +131,10 @@ const ChangePassword = () => {
           variant="primary"
           fullWidth
           onPress={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
           style={styles.resetButton}
         >
-          Reset Password
+          {isSubmitting ? 'Resetting...' : 'Reset Password'}
         </Button>
       </ScrollView>
     </View>

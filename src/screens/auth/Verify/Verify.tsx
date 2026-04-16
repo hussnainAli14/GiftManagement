@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { MultiStepInput, Button } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import type { VerifyScreenNavigationProp, VerifyFormData } from '../Welcome/types';
+import { resendVerificationCodeApi, verifyEmailApi } from '../../../api/authApi';
+import type { AuthStackParamList, VerifyScreenNavigationProp, VerifyFormData } from '../Welcome/types';
 
 const Verify = () => {
   const navigation = useNavigation<VerifyScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'Verify'>>();
   const insets = useSafeAreaInsets();
   const [resendMessage, setResendMessage] = useState<string | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const email = route.params?.email ?? '';
 
-  // Example email - in real app, this would come from navigation params or state
-  const email = 'john.doe@example.com';
 
   const {
     control,
@@ -33,24 +36,38 @@ const Verify = () => {
     // Code completion is handled automatically by react-hook-form validation
   };
 
-  const onSubmit = (data: VerifyFormData) => {
-    console.log('Verification data:', data);
-    // Navigate to Success screen
-    navigation.navigate('Success');
+  const onSubmit = async (data: VerifyFormData) => {
+    try {
+      if (!email) {
+        throw new Error('Missing email. Please sign up again.');
+      }
+      setIsSubmitting(true);
+      await verifyEmailApi(email, data.verificationCode);
+      Alert.alert('Verified', 'Email verified successfully. Please login.');
+      navigation.navigate('Login', { role: route.params?.role ?? 'user' });
+    } catch (error) {
+      Alert.alert('Verification Failed', error instanceof Error ? error.message : 'Unable to verify');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleResendCode = () => {
-    // Reset form
-    reset({
-      verificationCode: '',
-    });
-    setResendMessage('A new code has been sent to your email');
-    // Clear the message after 5 seconds
-    setTimeout(() => {
-      setResendMessage(undefined);
-    }, 5000);
-    // Handle resend logic here (e.g., API call)
-    console.log('Resending code...');
+  const handleResendCode = async () => {
+    try {
+      if (!email) {
+        throw new Error('Missing email. Please sign up again.');
+      }
+      await resendVerificationCodeApi(email);
+      reset({
+        verificationCode: '',
+      });
+      setResendMessage('A new code has been sent to your email');
+      setTimeout(() => {
+        setResendMessage(undefined);
+      }, 5000);
+    } catch (error) {
+      Alert.alert('Resend Failed', error instanceof Error ? error.message : 'Unable to resend code');
+    }
   };
 
   return (
@@ -120,9 +137,10 @@ const Verify = () => {
           variant="primary"
           fullWidth
           onPress={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
           style={styles.verifyButton}
         >
-          Verify
+          {isSubmitting ? 'Verifying...' : 'Verify'}
         </Button>
 
         {/* Resend Code Link */}

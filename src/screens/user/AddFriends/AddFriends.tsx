@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, FlatList } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, ScrollView, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AddFriendSearchBar, FriendRequestItem, AddFriendUserItem } from '../../../components';
 import type { SearchCriteria } from '../../../components/AddFriendSearchBar';
 import type { FriendRequest } from '../../../components/FriendRequestItem';
 import type { AddFriendUser } from '../../../components/AddFriendUserItem';
+import {
+  acceptFriendRequestApi,
+  declineFriendRequestApi,
+  getFriendsApi,
+  getPendingFriendRequestsApi,
+  getSentFriendRequestsApi,
+  sendFriendRequestApi,
+} from '../../../api/friendApi';
+import { searchUsersApi } from '../../../api/userApi';
 import { colors } from '../../../theme';
-import { typography } from '../../../theme';
 import { styles } from './styles';
 
 type AddFriendsStackParamList = {
@@ -16,6 +24,7 @@ type AddFriendsStackParamList = {
     friendId: string;
     friendName: string;
     friendAvatar: string;
+    friendEmail?: string;
   };
 };
 
@@ -24,118 +33,134 @@ type AddFriendsScreenNavigationProp = NativeStackNavigationProp<
   'AddFriends'
 >;
 
-// Mock data - replace with real API data when integrating
-const incomingRequests: FriendRequest[] = [
-  {
-    id: '1',
-    firstName: 'Saqlin',
-    lastName: 'Ahmed',
-    name: 'Saqlin Ahmed',
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    mutualFriendsCount: 5,
-    type: 'incoming',
-  },
-  {
-    id: '2',
-    firstName: 'Hassam',
-    lastName: 'Khan',
-    name: 'Hassam Khan',
-    avatar: 'https://i.pravatar.cc/150?img=13',
-    mutualFriendsCount: 12,
-    type: 'incoming',
-  },
-  {
-    id: '3',
-    firstName: 'Usman',
-    lastName: 'Ali',
-    name: 'Usman Ali',
-    avatar: 'https://i.pravatar.cc/150?img=14',
-    mutualFriendsCount: 3,
-    type: 'incoming',
-  },
-];
-
-const outgoingRequests: FriendRequest[] = [
-  {
-    id: '4',
-    firstName: 'Aisha',
-    lastName: 'Rahman',
-    name: 'Aisha Rahman',
-    avatar: 'https://i.pravatar.cc/150?img=8',
-    mutualFriendsCount: 8,
-    type: 'outgoing',
-  },
-  {
-    id: '5',
-    firstName: 'Fatima',
-    lastName: 'Zahra',
-    name: 'Fatima Zahra',
-    avatar: 'https://i.pravatar.cc/150?img=9',
-    mutualFriendsCount: 1,
-    type: 'outgoing',
-  },
-  {
-    id: '6',
-    firstName: 'Ibrahim',
-    lastName: 'Malik',
-    name: 'Ibrahim Malik',
-    avatar: 'https://i.pravatar.cc/150?img=10',
-    mutualFriendsCount: 7,
-    type: 'outgoing',
-  },
-  {
-    id: '7',
-    firstName: 'Mariam',
-    lastName: 'Hassan',
-    name: 'Mariam Hassan',
-    avatar: 'https://i.pravatar.cc/150?img=11',
-    mutualFriendsCount: 10,
-    type: 'outgoing',
-  },
-];
-
-// Users not in requests (search results / all users)
-const otherUsers: AddFriendUser[] = [
-  {
-    id: '8',
-    name: 'Saqlain',
-    avatar: 'https://i.pravatar.cc/150?img=15',
-  },
-  {
-    id: '9',
-    name: 'Ahmed Khan',
-    avatar: 'https://i.pravatar.cc/150?img=16',
-  },
-];
-
 const AddFriends = () => {
   const navigation = useNavigation<AddFriendsScreenNavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCriteria, setSelectedCriteria] = useState<SearchCriteria>('username');
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
+  const [otherUsers, setOtherUsers] = useState<AddFriendUser[]>([]);
+  const [friendUserIds, setFriendUserIds] = useState<Set<string>>(() => new Set());
+  const [addingFriendId, setAddingFriendId] = useState<string | null>(null);
 
-  const handleSearch = () => {
+  const loadFriendIds = useCallback(async () => {
+    try {
+      const friends = await getFriendsApi();
+      setFriendUserIds(new Set(friends.map((f) => f.friend._id)));
+    } catch {
+      setFriendUserIds(new Set());
+    }
+  }, []);
+
+  const loadRequests = useCallback(async () => {
+    try {
+      const [pending, sent] = await Promise.all([getPendingFriendRequestsApi(), getSentFriendRequestsApi()]);
+      setIncomingRequests(
+        pending.map((request) => {
+          const requester = request.requester;
+          const fullName = requester?.name || 'User';
+          const parts = fullName.split(' ');
+          return {
+            id: request._id,
+            firstName: parts[0] || fullName,
+            lastName: parts.slice(1).join(' '),
+            name: fullName,
+            avatar: requester?.avatar ?? '',
+            mutualFriendsCount: 0,
+            type: 'incoming',
+            peerUserId: requester?._id,
+            peerEmail: requester?.email,
+          } as FriendRequest;
+        })
+      );
+      setOutgoingRequests(
+        sent.map((request) => {
+          const receiver = request.receiver;
+          const fullName = receiver?.name || 'User';
+          const parts = fullName.split(' ');
+          return {
+            id: request._id,
+            firstName: parts[0] || fullName,
+            lastName: parts.slice(1).join(' '),
+            name: fullName,
+            avatar: receiver?.avatar ?? '',
+            mutualFriendsCount: 0,
+            type: 'outgoing',
+            peerUserId: receiver?._id,
+            peerEmail: receiver?.email,
+          } as FriendRequest;
+        })
+      );
+    } catch {
+      setIncomingRequests([]);
+      setOutgoingRequests([]);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRequests();
+      loadFriendIds();
+    }, [loadFriendIds, loadRequests])
+  );
+
+  const handleSearch = async () => {
     setHasSearched(true);
-    // In real app: filter incoming/outgoing by searchQuery + criteria, or fetch all users
+    if (!searchQuery.trim()) {
+      setOtherUsers([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      // Backend: GET /users/search?q= — may include friendshipStatus (friend / pending / available).
+      const [users, friendsRes] = await Promise.all([
+        searchUsersApi(searchQuery.trim()),
+        getFriendsApi().catch(() => []),
+      ]);
+      setFriendUserIds(new Set(friendsRes.map((f) => f.friend._id)));
+      setOtherUsers(
+        users.map((user) => ({
+          id: user._id,
+          name: user.name || user.email || 'User',
+          avatar: user.avatar ?? '',
+          email: user.email,
+          friendshipStatus: user.friendshipStatus,
+        }))
+      );
+    } catch {
+      setOtherUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
-  const handleAccept = (request: FriendRequest) => {
-    console.log('Accept:', request);
+  const handleAccept = async (request: FriendRequest) => {
+    await acceptFriendRequestApi(request.id);
+    await loadRequests();
+    await loadFriendIds();
   };
 
-  const handleDecline = (request: FriendRequest) => {
-    console.log('Decline:', request);
+  const handleDecline = async (request: FriendRequest) => {
+    await declineFriendRequestApi(request.id);
+    loadRequests();
   };
 
-  const handleCancel = (request: FriendRequest) => {
-    console.log('Cancel:', request);
+  const handleCancel = async (request: FriendRequest) => {
+    await declineFriendRequestApi(request.id);
+    loadRequests();
   };
 
   const handleRequestPress = (request: FriendRequest) => {
+    const uid = request.peerUserId;
+    if (!uid) return;
     navigation.navigate('FriendProfile', {
-      friendId: request.id,
+      friendId: uid,
       friendName: request.name,
       friendAvatar: typeof request.avatar === 'string' ? request.avatar : '',
+      friendEmail: request.peerEmail,
     });
   };
 
@@ -144,39 +169,74 @@ const AddFriends = () => {
       friendId: user.id,
       friendName: user.name,
       friendAvatar: typeof user.avatar === 'string' ? user.avatar : '',
+      friendEmail: user.email,
     });
   };
 
-  const handleAddFriend = (user: AddFriendUser) => {
-    console.log('Add friend:', user);
+  const handleAddFriend = async (user: AddFriendUser) => {
+    if (addingFriendId) return;
+    try {
+      setAddingFriendId(user.id);
+      await sendFriendRequestApi(user.id);
+      setOtherUsers((prev) => prev.filter((entry) => entry.id !== user.id));
+      await loadRequests();
+      await loadFriendIds();
+      Alert.alert('Friend request sent', `A request was sent to ${user.name}.`);
+    } catch (e) {
+      Alert.alert(
+        'Could not send request',
+        e instanceof Error ? e.message : 'Please try again.'
+      );
+    } finally {
+      setAddingFriendId(null);
+    }
   };
 
   // Filter requests by search query when user has searched
-  const filteredIncoming = hasSearched && searchQuery.trim()
+  const q = searchQuery.trim().toLowerCase();
+  const filteredIncoming = hasSearched && q
     ? incomingRequests.filter(
         (r) =>
-          r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+          r.name.toLowerCase().includes(q) ||
+          r.firstName.toLowerCase().includes(q) ||
+          r.lastName.toLowerCase().includes(q) ||
+          (r.peerEmail?.toLowerCase().includes(q) ?? false)
       )
     : incomingRequests;
 
-  const filteredOutgoing = hasSearched && searchQuery.trim()
+  const filteredOutgoing = hasSearched && q
     ? outgoingRequests.filter(
         (r) =>
-          r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+          r.name.toLowerCase().includes(q) ||
+          r.firstName.toLowerCase().includes(q) ||
+          r.lastName.toLowerCase().includes(q) ||
+          (r.peerEmail?.toLowerCase().includes(q) ?? false)
       )
     : outgoingRequests;
 
-  // Other users: filter by search when user has searched; otherwise show all (e.g. suggested)
-  const filteredOtherUsers =
-    hasSearched && searchQuery.trim()
-      ? otherUsers.filter((u) =>
-          u.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : otherUsers;
+  /** Peers with an incoming or outgoing pending request — do not show again under People. */
+  const pendingPeerIds = useMemo(() => {
+    const s = new Set<string>();
+    incomingRequests.forEach((r) => {
+      if (r.peerUserId) s.add(r.peerUserId);
+    });
+    outgoingRequests.forEach((r) => {
+      if (r.peerUserId) s.add(r.peerUserId);
+    });
+    return s;
+  }, [incomingRequests, outgoingRequests]);
+
+  const filteredOtherUsers = useMemo(
+    () =>
+      otherUsers.filter((u) => {
+        if (friendUserIds.has(u.id)) return false;
+        if (pendingPeerIds.has(u.id)) return false;
+        const st = u.friendshipStatus;
+        if (st === 'friend' || st === 'pending') return false;
+        return true;
+      }),
+    [otherUsers, friendUserIds, pendingPeerIds]
+  );
 
   const renderIncoming = ({ item }: { item: FriendRequest }) => (
     <FriendRequestItem
@@ -200,6 +260,7 @@ const AddFriends = () => {
       user={item}
       onAddFriend={handleAddFriend}
       onPress={handleUserPress}
+      addRequestLoading={addingFriendId === item.id}
     />
   );
 
@@ -222,6 +283,32 @@ const AddFriends = () => {
             placeholder="Search by username..."
           />
         </View>
+
+        {searchLoading ? (
+          <View style={styles.searchStatusRow}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : null}
+
+        {hasSearched && searchQuery.trim() && !searchLoading && otherUsers.length === 0 ? (
+          <View style={styles.searchStatusRow}>
+            <Text style={styles.emptySearchText}>
+              No users found. Try another name, email, or phone number.
+            </Text>
+          </View>
+        ) : null}
+
+        {hasSearched &&
+        searchQuery.trim() &&
+        !searchLoading &&
+        otherUsers.length > 0 &&
+        filteredOtherUsers.length === 0 ? (
+          <View style={styles.searchStatusRow}>
+            <Text style={styles.emptySearchText}>
+              Everyone matching your search is already a friend or has a pending request.
+            </Text>
+          </View>
+        ) : null}
 
         {/* Incoming Requests */}
         {filteredIncoming.length > 0 && (

@@ -1,81 +1,49 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { EventListItem } from '../../../components';
 import type { EventListItemData, EventStatus } from '../../../components/EventListItem';
+import { getEventsFeedApi, type EventModel } from '../../../api/eventApi';
 import { styles } from './styles';
 
 type EventsStackParamList = {
   EventsMain: undefined;
-  PersonsWishlist: { eventTitle?: string };
+  PersonsWishlist: { eventTitle?: string; eventId?: string };
 };
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsMain'>;
 
-// Mock data - replace with real API data when integrating
-const allEvents: EventListItemData[] = [
-  {
-    id: '1',
-    title: "Sarah's 30th Birthday",
-    date: 'Dec 25, 2026',
-    status: 'upcoming',
-  },
-  {
-    id: '2',
-    title: "Mom & Dad's 25th Anniversary",
-    date: 'Dec 31, 2026',
-    status: 'upcoming',
-  },
-  {
-    id: '3',
-    title: "Grandma's 80th Birthday Celebration",
-    date: 'Nov 28, 2026',
-    status: 'upcoming',
-  },
-  {
-    id: '4',
-    title: "Hamza & Nadia's Anniversary Dinner",
-    date: 'Jan 15, 2027',
-    status: 'upcoming',
-  },
-  {
-    id: '5',
-    title: 'Company Holiday Party',
-    date: 'Oct 10, 2025',
-    status: 'past',
-  },
-  {
-    id: '6',
-    title: 'Team Building Event',
-    date: 'Sep 5, 2025',
-    status: 'past',
-  },
-  {
-    id: '7',
-    title: 'Summer BBQ',
-    date: 'Aug 20, 2025',
-    status: 'past',
-  },
-  {
-    id: '8',
-    title: 'Birthday Planning',
-    date: 'TBD',
-    status: 'draft',
-  },
-  {
-    id: '9',
-    title: 'Anniversary Ideas',
-    date: 'TBD',
-    status: 'draft',
-  },
-];
+function toListItem(event: EventModel): EventListItemData {
+  const eventDate = new Date(event.date);
+  const isPast = eventDate.getTime() < Date.now();
+  const status: EventStatus = eventDate.toString() === 'Invalid Date' ? 'draft' : isPast ? 'past' : 'upcoming';
+  return {
+    id: event._id,
+    title: event.name,
+    date: status === 'draft' ? 'TBD' : eventDate.toLocaleDateString(),
+    status,
+  };
+}
 
 type FilterTab = EventStatus;
 
 const Events = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('upcoming');
+  const [allEvents, setAllEvents] = useState<EventListItemData[]>([]);
   const navigation = useNavigation<EventsScreenNavigationProp>();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const events = await getEventsFeedApi();
+        setAllEvents(events.map(toListItem));
+      } catch {
+        setAllEvents([]);
+      }
+    };
+    load();
+  }, []);
 
   const counts = useMemo(() => {
     return {
@@ -83,15 +51,15 @@ const Events = () => {
       past: allEvents.filter((e) => e.status === 'past').length,
       draft: allEvents.filter((e) => e.status === 'draft').length,
     };
-  }, []);
+  }, [allEvents]);
 
   const filteredEvents = useMemo(
     () => allEvents.filter((e) => e.status === selectedFilter),
-    [selectedFilter]
+    [allEvents, selectedFilter]
   );
 
   const handleEventPress = (event: EventListItemData) => {
-    navigation.navigate('PersonsWishlist', { eventTitle: event.title });
+    navigation.navigate('PersonsWishlist', { eventTitle: event.title, eventId: event.id });
   };
 
   const renderFilterTag = (filter: FilterTab, label: string, count: number) => {

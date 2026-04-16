@@ -28,4 +28,18 @@ export const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 16,
   },
+  searchStatusRow: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    alignItems: 'center',
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  emptySearchText: {
+    ...typography.textStyles.regular,
+    fontSize: 15,
+    color: colors.darkGray,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

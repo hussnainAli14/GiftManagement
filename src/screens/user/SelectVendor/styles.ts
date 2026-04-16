@@ -75,4 +75,28 @@ export const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
   },
+  loadingSpinner: {
+    marginTop: 24,
+  },
+  emptyListText: {
+    padding: 16,
+    color: colors.darkGray,
+    textAlign: 'center',
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+  },
+  listContentWhenEmpty: {
+    flexGrow: 1,
+  },
+  listEmptyWrap: {
+    flexGrow: 1,
+    minHeight: 220,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  missingParamsWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
 });

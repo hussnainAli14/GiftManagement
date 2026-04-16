@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import type { SignUpScreenNavigationProp, SignUpFormData } from '../Welcome/types';
+import type { RouteProp } from '@react-navigation/native';
+import { signupApi } from '../../../api/authApi';
+import type { AuthStackParamList, SignUpScreenNavigationProp, SignUpFormData } from '../Welcome/types';
 
 const SignUp = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'SignUp'>>();
+  const role = route.params?.role ?? 'user';
   const insets = useSafeAreaInsets();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     control,
@@ -33,10 +38,22 @@ const SignUp = () => {
 
   const password = watch('password');
 
-  const onSubmit = (data: SignUpFormData) => {
-    console.log('Sign Up data:', data);
-    // Navigate to Preferences screen
-    navigation.navigate('Preferences');
+  const onSubmit = async (data: SignUpFormData) => {
+    try {
+      setIsSubmitting(true);
+      const result = await signupApi({
+        role,
+        fullName: data.fullName.trim(),
+        email: data.email.trim(),
+        phoneNumber: data.phoneNumber.trim(),
+        password: data.password,
+      });
+      navigation.navigate('Verify', { email: result.email, role });
+    } catch (error) {
+      Alert.alert('Signup Failed', error instanceof Error ? error.message : 'Unable to signup');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -201,10 +218,10 @@ const SignUp = () => {
             variant="primary"
             fullWidth
             onPress={handleSubmit(onSubmit)}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
             style={styles.continueButton}
           >
-            Continue
+            {isSubmitting ? 'Creating Account...' : 'Continue'}
           </Button>
         </View>
       </ScrollView>

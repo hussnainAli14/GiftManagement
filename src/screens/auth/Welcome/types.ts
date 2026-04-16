@@ -5,10 +5,10 @@ export type AuthStackParamList = {
   RoleSelection: { mode: 'login' | 'signup' };
   Login: { role?: 'user' | 'vendor' };
   SignUp: { role?: 'user' | 'vendor' };
-  ForgotPassword: undefined;
-  OTP: undefined;
-  Verify: undefined;
-  ChangePassword: undefined;
+  ForgotPassword: { email?: string };
+  OTP: { email?: string };
+  Verify: { email?: string; role?: 'user' | 'vendor' };
+  ChangePassword: { email?: string; otp?: string };
   Success: undefined;
   Preferences: undefined;
 };

@@ -29,7 +29,16 @@ export const styles = StyleSheet.create({
     ...typography.textStyles.bold,
     fontSize: 24,
     color: colors.black,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  friendEmail: {
+    ...typography.textStyles.regular,
+    fontSize: 15,
+    color: colors.darkGray,
+    textAlign: 'center',
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   profileActions: {
     flexDirection: 'row',
@@ -75,5 +84,27 @@ export const styles = StyleSheet.create({
   },
   horizontalList: {
     paddingRight: 24,
+  },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  errorBanner: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#fff3f3',
+  },
+  errorText: {
+    ...typography.textStyles.regular,
+    fontSize: 14,
+    color: colors.darkGray,
+  },
+  emptyHint: {
+    ...typography.textStyles.regular,
+    fontSize: 14,
+    color: colors.darkGray,
+    marginBottom: 8,
   },
 });

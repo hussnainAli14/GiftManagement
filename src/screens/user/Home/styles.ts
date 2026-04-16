@@ -34,6 +34,27 @@ export const styles = StyleSheet.create({
   iconButton: {
     padding: 4,
   },
+  iconWrap: {
+    position: 'relative',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  notifBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
   scrollView: {
     flex: 1,
   },
@@ -56,6 +77,17 @@ export const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold as '700',
     marginTop: 0,
     marginBottom: 16,
+  },
+  eventsLoading: {
+    marginVertical: 16,
+    alignSelf: 'flex-start',
+  },
+  emptyEventsMessage: {
+    ...typography.textStyles.body,
+    fontSize: 15,
+    color: colors.darkGray,
+    lineHeight: 22,
+    marginBottom: 8,
   },
   eventCard: {
     marginBottom: 16,

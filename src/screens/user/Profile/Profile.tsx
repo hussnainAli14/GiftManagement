@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../../context/AuthContext';
+import {
+  getMyProfileApi,
+  updateMyProfileApi,
+  registerDeviceTokenApi,
+  removeDeviceTokenApi,
+} from '../../../api/userApi';
+import { getFcmToken, requestUserPermission } from '../../../notifications/push';
 import { styles } from './styles';
 import { colors } from '../../../theme';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
   ChangePassword: undefined;
+  MyProfile: undefined;
+  EditMyProfile: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfService: undefined;
 };
 
 type SettingRowProps = {
@@ -65,13 +76,74 @@ const Profile = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>>();
   const { logout } = useAuth();
   const [notificationsOn, setNotificationsOn] = useState(true);
+  const [loadingNotifPref, setLoadingNotifPref] = useState(true);
 
-  const handleLogout = () => {
-    logout();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMyProfileApi();
+        if (cancelled) return;
+        setNotificationsOn(me.notificationsEnabled !== false);
+      } catch {
+        // keep default
+      } finally {
+        if (!cancelled) setLoadingNotifPref(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleNotifications = useCallback(
+    async (next: boolean) => {
+      setNotificationsOn(next);
+      try {
+        await updateMyProfileApi({ notificationsEnabled: next });
+
+        // Best-effort: register/unregister token so server can push in background
+        const token = await getFcmToken().catch(() => '');
+        if (token) {
+          if (next) {
+            const granted = await requestUserPermission();
+            if (!granted) {
+              setNotificationsOn(false);
+              await updateMyProfileApi({ notificationsEnabled: false });
+              Alert.alert('Notifications disabled', 'Permission was not granted.');
+              return;
+            }
+            await registerDeviceTokenApi(token);
+          } else {
+            await removeDeviceTokenApi(token);
+          }
+        }
+      } catch (e) {
+        setNotificationsOn(!next);
+        Alert.alert('Could not update notifications', e instanceof Error ? e.message : 'Please try again.');
+      }
+    },
+    []
+  );
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleChangePassword = () => {
     navigation.navigate('ChangePassword');
+  };
+
+  const handleManageAccount = () => {
+    navigation.navigate('MyProfile');
+  };
+
+  const handlePrivacyPolicy = () => {
+    navigation.navigate('PrivacyPolicy');
+  };
+
+  const handleTerms = () => {
+    navigation.navigate('TermsOfService');
   };
 
   return (
@@ -80,29 +152,14 @@ const Profile = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>General Preferences</Text>
+        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Account & Security</Text>
         <SettingRow
-          icon="notifications-none"
-          title="Notifications"
-          subtitle="Manage alerts and sounds"
-          rightElement={
-            <Switch
-              value={notificationsOn}
-              onValueChange={setNotificationsOn}
-              trackColor={{ false: colors.borderGray, true: colors.primary }}
-              thumbColor={colors.white}
-            />
-          }
-        />
-        <SettingRow
-          icon="language"
-          title="Language"
-          subtitle="English (US)"
-          onPress={() => {}}
+          icon="people-outline"
+          title="Manage Account"
+          subtitle="Update personal info and preferences"
+          onPress={handleManageAccount}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
-
-        <Text style={styles.sectionTitle}>Account & Security</Text>
         <SettingRow
           icon="credit-card"
           title="Payment Methods"
@@ -117,10 +174,26 @@ const Profile = () => {
           onPress={handleChangePassword}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
+
+        <Text style={styles.sectionTitle}>General Preferences</Text>
         <SettingRow
-          icon="people-outline"
-          title="Manage Account"
-          subtitle="Update personal info and preferences"
+          icon="notifications-none"
+          title="Notifications"
+          subtitle="Manage alerts and sounds"
+          rightElement={
+            <Switch
+              value={notificationsOn}
+              onValueChange={toggleNotifications}
+              disabled={loadingNotifPref}
+              trackColor={{ false: colors.borderGray, true: colors.primary }}
+              thumbColor={colors.white}
+            />
+          }
+        />
+        <SettingRow
+          icon="language"
+          title="Language"
+          subtitle="English (US)"
           onPress={() => {}}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
@@ -130,30 +203,14 @@ const Profile = () => {
           icon="verified-user"
           title="Privacy Policy"
           subtitle="Understand how your data is handled"
-          onPress={() => {}}
+          onPress={handlePrivacyPolicy}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
         <SettingRow
           icon="description"
           title="Terms of Service"
           subtitle="Read our terms and conditions"
-          onPress={() => {}}
-          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
-        />
-
-        <Text style={styles.sectionTitle}>Support</Text>
-        <SettingRow
-          icon="help-outline"
-          title="Help Center"
-          subtitle="Find answers to common questions"
-          onPress={() => {}}
-          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
-        />
-        <SettingRow
-          icon="email"
-          title="Contact Support"
-          subtitle="Get in touch with our support team"
-          onPress={() => {}}
+          onPress={handleTerms}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
 

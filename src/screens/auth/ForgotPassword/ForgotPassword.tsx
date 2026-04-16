@@ -1,16 +1,19 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import type { ForgotPasswordScreenNavigationProp, ForgotPasswordFormData } from '../Welcome/types';
+import { forgotPasswordApi } from '../../../api/authApi';
+import type { AuthStackParamList, ForgotPasswordScreenNavigationProp, ForgotPasswordFormData } from '../Welcome/types';
 
 const ForgotPassword = () => {
   const navigation = useNavigation<ForgotPasswordScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'ForgotPassword'>>();
   const insets = useSafeAreaInsets();
 
   const {
@@ -19,14 +22,17 @@ const ForgotPassword = () => {
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     defaultValues: {
-      email: '',
+      email: route.params?.email ?? '',
     },
   });
 
-  const onSubmit = (data: ForgotPasswordFormData) => {
-    console.log('Forgot Password data:', data);
-    // Navigate to OTP screen
-    navigation.navigate('OTP');
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    try {
+      await forgotPasswordApi(data.email.trim());
+      navigation.navigate('OTP', { email: data.email.trim() });
+    } catch (error) {
+      Alert.alert('Request Failed', error instanceof Error ? error.message : 'Unable to send OTP');
+    }
   };
 
   return (

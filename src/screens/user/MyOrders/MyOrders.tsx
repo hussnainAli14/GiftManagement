@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { styles } from './styles';
-import { DUMMY_ORDERS } from './types';
 import type { OrderEntry, OrderStatus } from './types';
+import { getMyOrdersApi } from '../../../api/orderApi';
+import { useAuth } from '../../../context/AuthContext';
 import { colors } from '../../../theme';
 
 type MyOrdersStackParamList = {
@@ -61,6 +62,42 @@ const OrderCard = ({ order, onViewDetails }: { order: OrderEntry; onViewDetails:
 
 const MyOrders = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MyOrdersStackParamList, 'MyOrders'>>();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<OrderEntry[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.id) {
+        return;
+      }
+      try {
+        const result = await getMyOrdersApi(user.id);
+        setOrders(
+          result.map((order) => ({
+            id: order._id,
+            date: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '-',
+            status:
+              order.status === 'DELIVERED'
+                ? 'Delivered'
+                : order.status === 'CANCELLED'
+                  ? 'Cancelled'
+                  : 'Processing',
+            items:
+              order.items?.map((item) => ({
+                name: item.productId?.name || item.giftId?.name || 'Item',
+                quantity: item.quantity || 1,
+                price: `PKR ${item.price ?? 0}`,
+                image: item.productId?.image || item.giftId?.image,
+              })) || [],
+            total: `PKR ${order.totalAmount ?? 0}`,
+          }))
+        );
+      } catch {
+        setOrders([]);
+      }
+    };
+    load();
+  }, [user?.id]);
 
   const handleViewDetails = (order: OrderEntry) => {
     navigation.navigate('OrderDetail', { order });
@@ -69,7 +106,7 @@ const MyOrders = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={DUMMY_ORDERS}
+        data={orders}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (

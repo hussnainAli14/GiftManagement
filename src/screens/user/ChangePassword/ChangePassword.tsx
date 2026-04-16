@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TextInput, Button } from '../../../components';
+import { changePasswordApi } from '../../../api/userApi';
 import { styles } from './styles';
 
 type ChangePasswordStackParamList = {
@@ -14,12 +15,27 @@ const ChangePassword = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleChangePassword = () => {
-    // TODO: Validate and call API; for now just navigate to Home
-    const parent = navigation.getParent();
-    if (parent) {
-      (parent as any).navigate('Home');
+  const handleChangePassword = async () => {
+    if (saving) return;
+    if (!currentPassword.trim() || !newPassword.trim()) {
+      Alert.alert('Missing fields', 'Please fill current and new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Passwords do not match', 'Please confirm your new password.');
+      return;
+    }
+    try {
+      setSaving(true);
+      await changePasswordApi(currentPassword, newPassword);
+      Alert.alert('Password changed', 'Your password was updated successfully.');
+      if (navigation.canGoBack()) navigation.goBack();
+    } catch (e) {
+      Alert.alert('Could not change password', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -59,6 +75,7 @@ const ChangePassword = () => {
           fullWidth
           onPress={handleChangePassword}
           style={styles.submitButton}
+          disabled={saving}
         >
           Change Password
         </Button>

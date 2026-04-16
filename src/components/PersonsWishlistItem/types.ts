@@ -14,6 +14,9 @@ export interface PersonsWishlistItemData {
 export interface PersonsWishlistItemProps {
   item: PersonsWishlistItemData;
   onPress?: (item: PersonsWishlistItemData) => void;
+  onEdit?: (item: PersonsWishlistItemData) => void;
+  onDelete?: (item: PersonsWishlistItemData) => void;
+  showActions?: boolean;
   /** When false, hides the contributed progress bar. Default: true */
   showContributed?: boolean;
   style?: ViewStyle;

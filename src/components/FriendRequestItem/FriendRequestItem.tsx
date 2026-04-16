@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Button } from '../Button';
-import { colors } from '../../theme';
-import { typography } from '../../theme';
 import { FriendRequestItemProps } from './types';
 import { styles } from './styles';
+import { getAvatarImageSource } from '../../utils/resolveUserAvatar';
 
 const FriendRequestItem: React.FC<FriendRequestItemProps> = ({
   request,
@@ -14,15 +13,14 @@ const FriendRequestItem: React.FC<FriendRequestItemProps> = ({
   onPress,
   style,
 }) => {
-  const imageSource =
-    typeof request.avatar === 'string'
-      ? { uri: request.avatar }
-      : request.avatar;
+  const imageSource = getAvatarImageSource(request.avatar, request.name);
 
   const mutualText =
     request.mutualFriendsCount === 1
       ? '1 mutual friend'
       : `${request.mutualFriendsCount} mutual friends`;
+
+  const email = request.peerEmail?.trim();
 
   const content = (
     <TouchableOpacity
@@ -36,6 +34,11 @@ const FriendRequestItem: React.FC<FriendRequestItemProps> = ({
           <Text style={styles.nameBold}>{request.firstName} </Text>
           <Text style={styles.nameRegular}>{request.lastName}</Text>
         </Text>
+        {email ? (
+          <Text style={styles.emailText} numberOfLines={1}>
+            {email}
+          </Text>
+        ) : null}
         <Text style={styles.mutualText}>{mutualText}</Text>
       </View>
       <View style={styles.actions}>

@@ -12,18 +12,15 @@ type GiftOptionsParams = {
   eventTitle?: string;
 };
 
-type GiftOptionsRouteProp = RouteProp<
-  { params: GiftOptionsParams },
-  'params'
->;
-
 type GiftingMethod = 'full' | 'contribute';
 
 type GiftOptionsStackParamList = {
-  GiftOptions: GiftOptionsParams;
+  GiftOptions: GiftOptionsParams | undefined;
   SelectVendor: { item: PersonsWishlistItemData; eventTitle?: string };
   ContributionProgress: { item: PersonsWishlistItemData; eventTitle?: string };
 };
+
+type GiftOptionsRouteProp = RouteProp<GiftOptionsStackParamList, 'GiftOptions'>;
 
 const styles = StyleSheet.create({
   container: {

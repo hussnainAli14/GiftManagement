@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { MultiStepInput, Button } from '../../../components';
 import { styles } from './styles';
-import type { OTPScreenNavigationProp } from '../Welcome/types';
+import { forgotPasswordApi, verifyOtpApi } from '../../../api/authApi';
+import type { AuthStackParamList, OTPScreenNavigationProp } from '../Welcome/types';
 
 const OTP = () => {
   const navigation = useNavigation<OTPScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'OTP'>>();
   const insets = useSafeAreaInsets();
   const [otpValue, setOtpValue] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [resendMessage, setResendMessage] = useState<string | undefined>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const email = route.params?.email ?? '';
 
   const handleOTPComplete = (value: string) => {
     // Clear any errors when OTP is complete
@@ -20,26 +25,43 @@ const OTP = () => {
     }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
+    if (!email) {
+      setError('Missing email. Please restart password reset.');
+      return;
+    }
     if (otpValue.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
     }
-    // Navigate to ChangePassword screen
-    navigation.navigate('ChangePassword');
+    try {
+      setIsSubmitting(true);
+      await verifyOtpApi(email, otpValue);
+      navigation.navigate('ChangePassword', { email, otp: otpValue });
+    } catch (apiError) {
+      setError(apiError instanceof Error ? apiError.message : 'Invalid OTP');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
+    if (!email) {
+      setError('Missing email. Please restart password reset.');
+      return;
+    }
     // Reset OTP value
     setOtpValue('');
     setError(undefined);
-    setResendMessage('A new otp has been sent to your email');
-    // Clear the message after 5 seconds
-    setTimeout(() => {
-      setResendMessage(undefined);
-    }, 5000);
-    // Handle resend logic here
-    console.log('Resending code...');
+    try {
+      await forgotPasswordApi(email);
+      setResendMessage('A new otp has been sent to your email');
+      setTimeout(() => {
+        setResendMessage(undefined);
+      }, 5000);
+    } catch (apiError) {
+      Alert.alert('Resend Failed', apiError instanceof Error ? apiError.message : 'Unable to resend OTP');
+    }
   };
 
   return (
@@ -75,9 +97,10 @@ const OTP = () => {
           variant="primary"
           fullWidth
           onPress={handleVerifyOTP}
+          disabled={isSubmitting}
           style={styles.verifyButton}
         >
-          Verify OTP
+          {isSubmitting ? 'Verifying...' : 'Verify OTP'}
         </Button>
 
         {/* Resend Code Link */}

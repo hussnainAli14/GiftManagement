@@ -21,7 +21,23 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
   const activeScreenName = focusedNestedRoute?.name ?? routeName;
 
   // Hide tab bar for specific screens (including nested stack screens)
-  const screensToHideTabBar = ['FriendProfile', 'PersonsWishlist', 'GiftOptions', 'SelectVendor', 'ConfirmOrder', 'Payment', 'OrderConfirmed', 'ContributionProgress', 'ContributionSuccess', 'MyOrders', 'OrderDetail', 'ChangePassword'];
+  const screensToHideTabBar = [
+    'FriendProfile',
+    'MessagesInbox',
+    'NewChat',
+    'ChatThread',
+    'PersonsWishlist',
+    'GiftOptions',
+    'SelectVendor',
+    'ConfirmOrder',
+    'Payment',
+    'OrderConfirmed',
+    'ContributionProgress',
+    'ContributionSuccess',
+    'MyOrders',
+    'OrderDetail',
+    'ChangePassword',
+  ];
 
   const tabBarStyle = currentOptions?.tabBarStyle as { display?: string } | undefined;
   const shouldHideTabBar =

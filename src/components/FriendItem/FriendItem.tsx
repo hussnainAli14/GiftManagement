@@ -2,9 +2,9 @@ import React from 'react';
 import { Text, Image, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../theme';
-import { typography } from '../../theme';
 import { FriendItemProps } from './types';
 import { styles } from './styles';
+import { getAvatarImageSource } from '../../utils/resolveUserAvatar';
 
 const FriendItem: React.FC<FriendItemProps> = ({
   friend,
@@ -17,10 +17,7 @@ const FriendItem: React.FC<FriendItemProps> = ({
     }
   };
 
-  const imageSource =
-    typeof friend.avatar === 'string'
-      ? { uri: friend.avatar }
-      : friend.avatar;
+  const imageSource = getAvatarImageSource(friend.avatar, friend.name);
 
   const content = (
     <TouchableOpacity

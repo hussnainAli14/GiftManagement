@@ -5,7 +5,7 @@ import { typography } from '../../theme';
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderGray,
@@ -16,12 +16,20 @@ export const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.lightGray,
     marginRight: 12,
+    marginTop: 2,
   },
   info: {
     flex: 1,
+    minWidth: 0,
   },
   name: {
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  emailText: {
+    ...typography.textStyles.bodySmall,
+    fontSize: 14,
+    color: colors.darkGray,
+    marginBottom: 2,
   },
   nameBold: {
     ...typography.textStyles.bold,
@@ -41,6 +49,7 @@ export const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
     gap: 8,
   },
   acceptButton: {

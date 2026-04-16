@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { useForm, Controller } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
 import { useAuth } from '../../../context/AuthContext';
+import { loginApi } from '../../../api/authApi';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { AuthStackParamList, LoginScreenNavigationProp, LoginFormData } from '../Welcome/types';
@@ -18,6 +19,7 @@ const Login = () => {
   const role = route.params?.role ?? 'user';
   const insets = useSafeAreaInsets();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     control,
@@ -41,15 +43,34 @@ const Login = () => {
     /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email) &&
     password.length >= 6;
 
-  const onSubmit = (data: LoginFormData) => {
-    console.log('Login data:', data);
-    // Mark user as authenticated and switch to Main or Vendor app by role
-    login(role);
-    // TODO: Handle login API and store token when integrated
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      setIsSubmitting(true);
+      const response = await loginApi({
+        email: data.email.trim(),
+        password: data.password,
+        role,
+      });
+
+      await login({
+        token: response.token,
+        user: {
+          id: response.id,
+          name: response.name,
+          email: response.email,
+          role: response.role,
+          isApproved: response.isApproved,
+        },
+      });
+    } catch (error) {
+      Alert.alert('Login Failed', error instanceof Error ? error.message : 'Unable to login');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleForgotPassword = () => {
-    navigation.navigate('ForgotPassword');
+    navigation.navigate('ForgotPassword', { email });
   };
 
   const handleCreateAccount = () => {
@@ -134,10 +155,10 @@ const Login = () => {
           variant="primary"
           fullWidth
           onPress={handleSubmit(onSubmit)}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSubmitting}
           style={styles.loginButton}
         >
-          Log In
+          {isSubmitting ? 'Logging In...' : 'Log In'}
         </Button>
 
         {/* Forgot Password Link */}
