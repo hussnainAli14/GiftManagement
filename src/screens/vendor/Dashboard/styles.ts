@@ -52,6 +52,37 @@ export const styles = StyleSheet.create({
     ...typography.textStyles.caption,
     color: colors.errorRed,
   },
+  trendNeutral: {
+    ...typography.textStyles.caption,
+    color: colors.textSecondary,
+  },
+  loadingWrap: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorCard: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+  },
+  errorTitle: {
+    ...typography.textStyles.h4,
+    color: colors.black,
+    marginBottom: 6,
+  },
+  errorBody: {
+    ...typography.textStyles.bodySmall,
+    color: colors.textSecondary,
+  },
+  errorHint: {
+    ...typography.textStyles.caption,
+    color: colors.primary,
+    marginTop: 10,
+  },
   actionButton: {
     marginBottom: 12,
     borderRadius: 10,

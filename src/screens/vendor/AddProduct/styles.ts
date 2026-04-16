@@ -43,6 +43,20 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     minHeight: 160,
   },
+  photoGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  photoThumb: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    backgroundColor: colors.lightGray,
+  },
   uploadIcon: {
     marginBottom: 12,
   },

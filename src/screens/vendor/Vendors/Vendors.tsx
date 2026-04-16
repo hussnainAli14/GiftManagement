@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
+import { getAdminsApi, type UserProfile } from '../../../api/userApi';
+import { colors } from '../../../theme';
 
 export type VendorApplicationItem = {
   id: string;
@@ -11,28 +13,50 @@ export type VendorApplicationItem = {
   appliedDate: string;
 };
 
-const MOCK_VENDOR_APPLICATIONS: VendorApplicationItem[] = [
-  { id: '1', vendorName: 'Ahmed Khan', companyName: 'Khan Tech Solutions', email: 'ahmed.khan@khantech.com', appliedDate: '2023-10-20' },
-  { id: '2', vendorName: 'Fatima Zahra', companyName: 'Zahra Fabrics', email: 'fatima.zahra@zahrafabrics.pk', appliedDate: '2023-10-19' },
-  { id: '3', vendorName: 'Mohammed Ali', companyName: 'Ali Arts & Crafts', email: 'mohammed.ali@aliarts.com', appliedDate: '2023-10-18' },
-  { id: '4', vendorName: 'Sara Ahmed', companyName: 'Sara Handmade', email: 'sara.ahmed@sarahandmade.pk', appliedDate: '2023-10-17' },
-  { id: '5', vendorName: 'Hassan Raza', companyName: 'Raza Electronics', email: 'hassan.raza@razaelectronics.com', appliedDate: '2023-10-16' },
-  { id: '6', vendorName: 'Ayesha Malik', companyName: 'Malik Gifts', email: 'ayesha.malik@malikgifts.pk', appliedDate: '2023-10-15' },
-  { id: '7', vendorName: 'Omar Farooq', companyName: 'Farooq Trading Co.', email: 'omar.farooq@farooqtrading.com', appliedDate: '2023-10-14' },
-];
+function toAdminItem(u: UserProfile): VendorApplicationItem {
+  return {
+    id: String(u._id),
+    vendorName: String(u.name || 'Admin'),
+    companyName: 'Administrator',
+    email: String(u.email || ''),
+    appliedDate: '',
+  };
+}
 
 const Vendors = () => {
   const insets = useSafeAreaInsets();
-  const [applications, setApplications] = useState<VendorApplicationItem[]>(MOCK_VENDOR_APPLICATIONS);
+  const [admins, setAdmins] = useState<VendorApplicationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await getAdminsApi();
+        const mapped = list.map(toAdminItem);
+        if (!cancelled) setAdmins(mapped);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load admins.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleApprove = (item: VendorApplicationItem) => {
-    // TODO: API call to approve vendor
-    setApplications((prev) => prev.filter((a) => a.id !== item.id));
+    // Intentionally no-op for now (admins list).
+    setAdmins((prev) => prev.filter((a) => a.id !== item.id));
   };
 
   const handleDeny = (item: VendorApplicationItem) => {
-    // TODO: API call to deny vendor
-    setApplications((prev) => prev.filter((a) => a.id !== item.id));
+    // Intentionally no-op for now (admins list).
+    setAdmins((prev) => prev.filter((a) => a.id !== item.id));
   };
 
   const renderCard = ({ item }: { item: VendorApplicationItem }) => (
@@ -41,7 +65,7 @@ const Vendors = () => {
       <Text style={styles.companyName}>{item.companyName}</Text>
       <Text style={styles.email}>{item.email}</Text>
       <View style={styles.actionRow}>
-      <Text style={styles.appliedDate}>Applied on: {item.appliedDate}</Text>
+      <Text style={styles.appliedDate}>Role: ADMIN</Text>
         <TouchableOpacity
           style={styles.approveButton}
           onPress={() => handleApprove(item)}
@@ -63,7 +87,7 @@ const Vendors = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={applications}
+        data={admins}
         keyExtractor={(item) => item.id}
         renderItem={renderCard}
         contentContainerStyle={[
@@ -71,6 +95,22 @@ const Vendors = () => {
           { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          loading ? (
+            <View style={{ paddingTop: 24, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading admins…</Text>
+            </View>
+          ) : error ? (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.errorRed, textAlign: 'center' }}>{error}</Text>
+            </View>
+          ) : (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>No admins found.</Text>
+            </View>
+          )
+        }
       />
     </View>
   );

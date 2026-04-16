@@ -10,11 +10,11 @@ import {
   AddProduct,
   MyProducts,
   EditProduct,
-  Users,
   Vendors,
   Orders,
   OrderDetails,
   Reports,
+  VendorProfile,
 } from '../screens/vendor';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
 import { typography } from '../theme';
@@ -26,9 +26,6 @@ const VendorTabBar = (props: BottomTabBarProps) => <VendorBottomTabBar {...props
 
 const renderDashboardIcon = ({ color, size }: { color: string; size: number }) => (
   <Icon name="home" size={size} color={color} />
-);
-const renderUsersIcon = ({ color, size }: { color: string; size: number }) => (
-  <Icon name="people" size={size} color={color} />
 );
 const renderVendorsIcon = ({ color, size }: { color: string; size: number }) => (
   <Icon name="store" size={size} color={color} />
@@ -47,8 +44,13 @@ const MarketConnectHeaderLeft = () => (
   </View>
 );
 
-const MarketConnectHeaderRight = () => (
-  <TouchableOpacity style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+const MarketConnectHeaderRight = ({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity
+    style={{ marginRight: 16 }}
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <Icon name="person-outline" size={24} color="#000000" />
   </TouchableOpacity>
 );
@@ -58,13 +60,23 @@ const DashboardStack = () => (
     <Stack.Screen
       name="DashboardMain"
       component={Dashboard}
-      options={{
+      options={({ navigation }) => ({
         headerShown: true,
         headerTitle: '',
         headerLeft: () => <MarketConnectHeaderLeft />,
-        headerRight: () => <MarketConnectHeaderRight />,
+        headerRight: () => <MarketConnectHeaderRight onPress={() => navigation.navigate('VendorProfile')} />,
         ...getDefaultHeaderOptions(),
-      }}
+      })}
+    />
+    <Stack.Screen
+      name="VendorProfile"
+      component={VendorProfile}
+      options={({ navigation }) => ({
+        headerShown: true,
+        headerTitle: 'Vendor Profile',
+        ...getDefaultHeaderOptions(),
+        headerLeft: getHeaderBackButton(navigation),
+      })}
     />
     <Stack.Screen
       name="AddProduct"
@@ -99,25 +111,6 @@ const DashboardStack = () => (
         headerTitle: 'Edit Product',
         ...getDefaultHeaderOptions(),
         headerLeft: getHeaderBackButton(navigation),
-      })}
-    />
-  </Stack.Navigator>
-);
-
-const UsersStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen
-      name="UsersMain"
-      component={Users}
-      options={({ navigation }) => ({
-        headerShown: true,
-        headerTitle: 'User Management',
-        ...getDefaultHeaderOptions(),
-        headerRight: () => (
-          <TouchableOpacity style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icon name="search" size={24} color="#000000" />
-          </TouchableOpacity>
-        ),
       })}
     />
   </Stack.Navigator>
@@ -206,14 +199,6 @@ const VendorNavigator = () => {
         options={{
           tabBarLabel: 'Dashboard',
           tabBarIcon: renderDashboardIcon,
-        }}
-      />
-      <Tab.Screen
-        name="Users"
-        component={UsersStack}
-        options={{
-          tabBarLabel: 'Users',
-          tabBarIcon: renderUsersIcon,
         }}
       />
       <Tab.Screen

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { TextInput, Dropdown } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
+import { getMyVendorProfileApi } from '../../../api/vendorApi';
+import { createProductApi, uploadProductImageApi } from '../../../api/productApi';
 
 const CATEGORY_OPTIONS = [
   { label: 'Electronics', value: 'electronics' },
@@ -22,19 +25,90 @@ const AddProduct = () => {
   const [price, setPrice] = useState('0.00');
   const [inventory, setInventory] = useState('0');
   const [category, setCategory] = useState<string | number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const handleCancel = () => {
     // TODO: confirm discard?
     navigation.goBack();
   };
 
-  const handleSave = () => {
-    // TODO: validate and submit to API
-    navigation.goBack();
+  const handleSave = async () => {
+    if (saving) return;
+    const name = productName.trim();
+    if (!name) {
+      Alert.alert('Missing product name', 'Please enter a product name.');
+      return;
+    }
+    if (!category) {
+      Alert.alert('Missing category', 'Please select a category.');
+      return;
+    }
+
+    const priceNum = Number(String(price).replace(/,/g, ''));
+    const invNum = Number(String(inventory).replace(/,/g, ''));
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      Alert.alert('Invalid price', 'Please enter a valid price.');
+      return;
+    }
+    if (Number.isNaN(invNum) || invNum < 0) {
+      Alert.alert('Invalid inventory', 'Please enter a valid inventory number.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const vendor = await getMyVendorProfileApi();
+      const vendorId = String(vendor?._id || '');
+      if (!vendorId) throw new Error('Vendor profile not found');
+
+      const created = await createProductApi(vendorId, {
+        name,
+        description: description.trim(),
+        price: priceNum,
+        inventory: invNum,
+        category: String(category),
+      });
+
+      // Best-effort: upload first selected photo as product image
+      if (photos[0]) {
+        try {
+          await uploadProductImageApi(String(created._id), photos[0]);
+        } catch {
+          // ignore image upload failures for now
+        }
+      }
+
+      Alert.alert('Saved', 'Product created successfully.');
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Could not save product', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddPhoto = () => {
-    // TODO: open image picker
+    (async () => {
+      try {
+        const res = await launchImageLibrary({
+          mediaType: 'photo',
+          selectionLimit: 5,
+          quality: 0.8,
+        });
+        if (res.didCancel) return;
+        const uris = (res.assets || [])
+          .map((a) => a?.uri)
+          .filter((u): u is string => typeof u === 'string' && u.length > 0);
+        if (uris.length === 0) {
+          Alert.alert('No photo selected', 'Please try again.');
+          return;
+        }
+        setPhotos((prev) => [...prev, ...uris].slice(0, 10));
+      } catch {
+        Alert.alert('Could not open gallery', 'Please try again.');
+      }
+    })();
   };
 
   return (
@@ -67,7 +141,7 @@ const AddProduct = () => {
         <View style={styles.row}>
           <View style={styles.halfInput}>
             <TextInput
-              label="Price (USD)"
+              label="Price (PKR)"
               placeholder="0.00"
               value={price}
               onChangeText={setPrice}
@@ -105,15 +179,25 @@ const AddProduct = () => {
             onPress={handleAddPhoto}
             activeOpacity={0.8}
           >
-            <Icon
-              name="add-photo-alternate"
-              size={48}
-              color={colors.darkGray}
-              style={styles.uploadIcon}
-            />
-            <Text style={styles.uploadText}>
-              Drag & drop images here, or click to upload
-            </Text>
+            {photos.length > 0 ? (
+              <View style={styles.photoGrid}>
+                {photos.map((uri) => (
+                  <Image key={uri} source={{ uri }} style={styles.photoThumb} />
+                ))}
+              </View>
+            ) : (
+              <>
+                <Icon
+                  name="add-photo-alternate"
+                  size={48}
+                  color={colors.darkGray}
+                  style={styles.uploadIcon}
+                />
+                <Text style={styles.uploadText}>
+                  Drag & drop images here, or click to upload
+                </Text>
+              </>
+            )}
             <TouchableOpacity
               style={styles.addPhotoButton}
               onPress={handleAddPhoto}
@@ -135,8 +219,13 @@ const AddProduct = () => {
           style={styles.saveButton}
           onPress={handleSave}
           activeOpacity={0.8}
+          disabled={saving}
         >
-          <Text style={styles.saveButtonText}>Save Product</Text>
+          {saving ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Product</Text>
+          )}
         </TouchableOpacity>
       </View>
       </ScrollView>

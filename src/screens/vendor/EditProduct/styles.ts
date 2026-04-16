@@ -54,6 +54,26 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.lightGray,
     marginBottom: 12,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  mediaActions: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 10,
+    zIndex: 2,
+  },
+  mediaActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaActionBtnDanger: {
+    backgroundColor: 'rgba(220,38,38,0.85)',
   },
   mediaImage: {
     width: '100%',
@@ -75,6 +95,27 @@ export const styles = StyleSheet.create({
     ...typography.textStyles.label,
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  thumbRow: {
+    paddingVertical: 10,
+    gap: 10,
+  },
+  thumbWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    backgroundColor: colors.lightGray,
+  },
+  thumbWrapSelected: {
+    borderColor: VENDOR_BLUE,
+    borderWidth: 2,
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
   },
   footer: {
     flexDirection: 'row',

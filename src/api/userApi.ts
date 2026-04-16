@@ -87,6 +87,18 @@ export async function searchUsersApi(query: string): Promise<UserSearchResult[]>
   return Array.isArray(data) ? data : [data];
 }
 
+export async function getAllUsersAdminApi(): Promise<UserProfile[]> {
+  const response = await apiRequest<unknown>('/users/admin/all', { auth: true });
+  const data = unwrapData<UserProfile[] | UserProfile>(response);
+  return Array.isArray(data) ? data : [data];
+}
+
+export async function getAdminsApi(): Promise<UserProfile[]> {
+  const response = await apiRequest<unknown>('/users/admins', { auth: true });
+  const data = unwrapData<UserProfile[] | UserProfile>(response);
+  return Array.isArray(data) ? data : [data];
+}
+
 /** Public user document (password excluded). */
 export async function getUserByIdApi(id: string): Promise<UserProfile> {
   return apiRequest<UserProfile>(`/users/${id}`, { auth: true });

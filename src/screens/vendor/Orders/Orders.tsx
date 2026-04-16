@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,6 +7,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Search } from '../../../components';
 import { colors } from '../../../theme';
 import { styles, BADGE_COLORS } from './styles';
+import { getMyVendorOrdersApi, type BackendOrder } from '../../../api/orderApi';
+import { API_ORIGIN } from '../../../api/config';
 
 type OrdersStackParamList = {
   OrdersMain: undefined;
@@ -24,19 +26,94 @@ export type VendorOrderItem = {
   imageUri?: string | number;
 };
 
-const MOCK_ORDERS: VendorOrderItem[] = [
-  { id: '1', orderId: 'MC1001', customerName: 'Alice Johnson', total: 'Rs 125.00', status: 'Delivered', imageUri: 'https://picsum.photos/seed/order1/200/200' },
-  { id: '2', orderId: 'MC1002', customerName: 'Bob Williams', total: 'Rs 75.50', status: 'Out for Delivery', imageUri: 'https://picsum.photos/seed/order2/200/200' },
-  { id: '3', orderId: 'MC1003', customerName: 'Charlie Davis', total: 'Rs 220.00', status: 'Processing', imageUri: 'https://picsum.photos/seed/order3/200/200' },
-  { id: '4', orderId: 'MC1004', customerName: 'Diana Miller', total: 'Rs 49.99', status: 'Pending', imageUri: 'https://picsum.photos/seed/order4/200/200' },
-  { id: '5', orderId: 'MC1005', customerName: 'Eve Brown', total: 'Rs 15.20', status: 'Delivered', imageUri: 'https://picsum.photos/seed/order5/200/200' },
-  { id: '6', orderId: 'MC1006', customerName: 'Frank White', total: 'Rs 300.00', status: 'Processing', imageUri: 'https://picsum.photos/seed/order6/200/200' },
-];
+function resolveImageUri(raw: unknown): string | undefined {
+  const s = String(raw || '').trim();
+  if (!s) return undefined;
+  if (s.startsWith('/')) return `${API_ORIGIN}${s}`;
+  return s;
+}
+
+function formatPKR(amount: number | undefined): string {
+  const n = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
+  return `Rs ${n.toFixed(2)}`;
+}
+
+function toUiStatus(status: BackendOrder['status']): OrderStatus {
+  const s = String(status || '').toLowerCase();
+  if (s === 'delivered') return 'Delivered';
+  if (s === 'pending') return 'Pending';
+  if (s === 'completed') return 'Processing';
+  if (s === 'cancelled') return 'Processing';
+  return 'Processing';
+}
+
+function shortOrderId(id: string): string {
+  const s = String(id || '');
+  return s.length > 6 ? s.slice(-6).toUpperCase() : s.toUpperCase();
+}
+
+function mapOrderToItem(o: BackendOrder): VendorOrderItem {
+  const id = String(o._id || '');
+  const customerName =
+    typeof o.userId === 'object' && o.userId && 'name' in o.userId
+      ? String(o.userId.name || 'Customer')
+      : 'Customer';
+
+  const firstProduct =
+    o.items?.find((it) => it && typeof it.productId === 'object' && it.productId)?.productId as
+      | { image?: string; images?: string[] }
+      | undefined;
+  const img = firstProduct?.images?.[0] || firstProduct?.image;
+
+  return {
+    id,
+    orderId: shortOrderId(id),
+    customerName,
+    total: formatPKR(o.totalAmount),
+    status: toUiStatus(o.status),
+    imageUri: resolveImageUri(img),
+  };
+}
 
 const Orders = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<OrdersStackParamList, 'OrdersMain'>>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [orders, setOrders] = useState<VendorOrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const raw = await getMyVendorOrdersApi();
+        const mapped = raw.map(mapOrderToItem);
+        if (!cancelled) setOrders(mapped);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load orders.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter((o) => {
+      return (
+        o.orderId.toLowerCase().includes(q) ||
+        o.customerName.toLowerCase().includes(q) ||
+        o.status.toLowerCase().includes(q)
+      );
+    });
+  }, [orders, searchQuery]);
 
   const renderStatus = (status: OrderStatus) => {
     const isBadge = status === 'Out for Delivery' || status === 'Pending';
@@ -91,7 +168,7 @@ const Orders = () => {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={MOCK_ORDERS}
+        data={filteredOrders}
         keyExtractor={(item) => item.id}
         renderItem={renderOrderCard}
         contentContainerStyle={[
@@ -99,6 +176,22 @@ const Orders = () => {
           { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          loading ? (
+            <View style={{ paddingTop: 24, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading orders…</Text>
+            </View>
+          ) : error ? (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.errorRed, textAlign: 'center' }}>{error}</Text>
+            </View>
+          ) : (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>No orders found.</Text>
+            </View>
+          )
+        }
       />
     </View>
   );

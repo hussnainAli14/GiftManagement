@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, Modal } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, Modal, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme';
 import { styles } from './styles';
+import { getMyVendorProfileApi } from '../../../api/vendorApi';
+import { deleteProductApi, getVendorProductsApi, type ProductModel } from '../../../api/productApi';
+import { API_ORIGIN } from '../../../api/config';
 
 type MyProductsStackParamList = {
   MyProducts: undefined;
@@ -22,20 +25,68 @@ export type VendorProductItem = {
   imageUri?: string | number;
 };
 
-const MOCK_PRODUCTS: VendorProductItem[] = [
-  { id: '1', name: 'Artisanal Organic Honey (500g)', price: 'Rs 18.00', stockStatus: 'In Stock', imageUri: 'https://picsum.photos/seed/honey/400/300' },
-  { id: '2', name: 'Handcrafted Ceramic Mug', price: 'Rs 25.50', stockStatus: 'Low Stock', imageUri: 'https://picsum.photos/seed/ceramic-mug/400/300' },
-  { id: '3', name: 'Natural Soy Wax Candle (Lavender)', price: 'Rs 12.99', stockStatus: 'Out of Stock', imageUri: 'https://picsum.photos/seed/candle/400/300' },
-  { id: '4', name: 'Gourmet Coffee Beans (250g)', price: 'Rs 32.00', stockStatus: 'In Stock', imageUri: 'https://picsum.photos/seed/coffee-beans/400/300' },
-  { id: '5', name: 'Organic Cotton Tea Towels (Set of 2)', price: 'Rs 15.00', stockStatus: 'In Stock', imageUri: 'https://picsum.photos/seed/tea-towels/400/300' },
-];
+function formatPrice(price: number | undefined): string {
+  const n = typeof price === 'number' ? price : 0;
+  return `Rs ${n.toFixed(2)}`;
+}
+
+function stockStatusFromInventory(inv: number | undefined): StockStatus {
+  const n = typeof inv === 'number' ? inv : 0;
+  if (n <= 0) return 'Out of Stock';
+  if (n <= 5) return 'Low Stock';
+  return 'In Stock';
+}
+
+function toVendorProductItem(p: ProductModel): VendorProductItem {
+  const raw = (p.image || '').trim();
+  const imageUri = raw ? (raw.startsWith('/') ? `${API_ORIGIN}${raw}` : raw) : undefined;
+  return {
+    id: String(p._id),
+    name: p.name || 'Product',
+    price: formatPrice(p.price),
+    stockStatus: stockStatusFromInventory(p.inventory),
+    imageUri,
+  };
+}
 
 const MyProducts = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<MyProductsStackParamList, 'MyProducts'>>();
   const listPaddingBottom = insets.bottom + 80;
-  const [products, setProducts] = useState<VendorProductItem[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<VendorProductItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string>('');
   const [productToDelete, setProductToDelete] = useState<VendorProductItem | null>(null);
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      const vendor = await getMyVendorProfileApi();
+      const vendorId = String(vendor?._id || '');
+      if (!vendorId) throw new Error('Vendor profile not found');
+      const rows = await getVendorProductsApi(vendorId);
+      setProducts(rows.map(toVendorProductItem));
+    } catch (e) {
+      setProducts([]);
+      setError(e instanceof Error ? e.message : 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      load();
+    }, [load]),
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   const renderStockStatus = (status: StockStatus) => {
     if (status === 'Out of Stock') {
@@ -59,19 +110,41 @@ const MyProducts = () => {
     setProductToDelete(null);
   };
 
-  const handleDeleteConfirm = () => {
-    if (productToDelete) {
-      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
-      setProductToDelete(null);
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+    const id = productToDelete.id;
+    setProductToDelete(null);
+    try {
+      await deleteProductApi(id);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      Alert.alert('Could not delete product', e instanceof Error ? e.message : 'Please try again.');
     }
   };
+
+  const listEmpty = useMemo(() => {
+    if (loading) return null;
+    if (error) {
+      return (
+        <View style={{ paddingTop: 20, alignItems: 'center' }}>
+          <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>{error}</Text>
+          <Text style={{ color: colors.primary, marginTop: 8 }}>Pull to refresh</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={{ paddingTop: 20, alignItems: 'center' }}>
+        <Text style={{ color: colors.textSecondary }}>No products yet</Text>
+      </View>
+    );
+  }, [error, loading]);
 
   const renderProductCard = ({ item }: { item: VendorProductItem }) => (
     <View style={styles.card}>
       <View style={styles.productImage}>
         {item.imageUri ? (
           <Image
-            source={{ uri: typeof item.imageUri === 'string' ? item.imageUri : undefined }}
+            source={typeof item.imageUri === 'string' ? { uri: item.imageUri } : (item.imageUri as any)}
             style={styles.productImageFill}
             resizeMode="cover"
           />
@@ -109,16 +182,25 @@ const MyProducts = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        renderItem={renderProductCard}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: listPaddingBottom },
-        ]}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id}
+          renderItem={renderProductCard}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: listPaddingBottom },
+            products.length === 0 ? { flexGrow: 1 } : null,
+          ]}
+          ListEmptyComponent={listEmpty}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
+      )}
 
       <Modal
         visible={productToDelete !== null}

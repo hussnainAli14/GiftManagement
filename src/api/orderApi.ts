@@ -1,5 +1,36 @@
 import { apiRequest, unwrapData } from './http';
 
+export type BackendOrder = {
+  _id: string;
+  userId?: { _id: string; name?: string; email?: string } | string;
+  recipientId?: { _id: string; name?: string; email?: string } | string;
+  items?: Array<{
+    productId?: {
+      _id: string;
+      name?: string;
+      image?: string;
+      images?: string[];
+      price?: number;
+    } | string;
+    quantity?: number;
+  }>;
+  totalAmount?: number;
+  status?: 'pending' | 'completed' | 'cancelled' | 'delivered' | string;
+  createdAt?: string;
+};
+
+type OrderResponse = {
+  success: boolean;
+  message?: string;
+  data?: BackendOrder | BackendOrder[];
+};
+
+export async function getMyVendorOrdersApi(): Promise<BackendOrder[]> {
+  const res = await apiRequest<OrderResponse | BackendOrder[]>(`/orders/vendor/my`, { auth: true });
+  const data = unwrapData<BackendOrder[] | BackendOrder>(res as any);
+  return Array.isArray(data) ? data : [data];
+}
+
 export type OrderItemModel = {
   productId?: { name?: string; price?: number; image?: string };
   giftId?: { name?: string; price?: number; image?: string };

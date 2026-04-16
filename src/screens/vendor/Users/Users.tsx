@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Search } from '../../../components';
 import { colors } from '../../../theme';
 import { styles } from './styles';
+import { getAllUsersAdminApi, type UserProfile } from '../../../api/userApi';
+import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
 
 export type UserStatus = 'Active' | 'Suspended';
 
@@ -25,27 +28,54 @@ export type VendorUserItem = {
   joinedDate?: string;
 };
 
-const MOCK_USERS: VendorUserItem[] = [
-  { id: '1', name: 'Ahmed Khan', email: 'ahmed.khan@example.com', status: 'Active', avatarUri: 'https://picsum.photos/seed/user1/96/96' },
-  { id: '2', name: 'Fatima Zahra', email: 'fatima.zahra@example.com', status: 'Suspended', avatarUri: 'https://picsum.photos/seed/user2/96/96' },
-  { id: '3', name: 'Omar Abdullah', email: 'omar.abdullah@example.com', status: 'Active', avatarUri: 'https://picsum.photos/seed/user3/96/96' },
-  { id: '4', name: 'Aisha Malik', email: 'aisha.malik@example.com', status: 'Active', avatarUri: 'https://picsum.photos/seed/user4/96/96' },
-  { id: '5', name: 'Bilal Hassan', email: 'bilal.hassan@example.com', status: 'Suspended', avatarUri: 'https://picsum.photos/seed/user5/96/96' },
-  { id: '6', name: 'Noor Ali', email: 'noor.ali@example.com', status: 'Active', avatarUri: 'https://picsum.photos/seed/user6/96/96' },
-  { id: '7', name: 'Yasir Javed', email: 'yasir.javed@example.com', status: 'Active', avatarUri: 'https://picsum.photos/seed/user7/96/96' },
-];
+function toVendorUserItem(u: UserProfile): VendorUserItem {
+  return {
+    id: String(u._id),
+    name: String(u.name || 'User'),
+    email: String(u.email || ''),
+    status: 'Active',
+    avatarUri: typeof u.avatar === 'string' ? u.avatar : undefined,
+    phone: u.phone,
+    joinedDate: undefined,
+  };
+}
 
 const Users = () => {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [userToView, setUserToView] = useState<VendorUserItem | null>(null);
   const [userToBan, setUserToBan] = useState<VendorUserItem | null>(null);
+  const [users, setUsers] = useState<VendorUserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredUsers = MOCK_USERS.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const all = await getAllUsersAdminApi();
+        const mapped = all.map(toVendorUserItem);
+        if (!cancelled) setUsers(mapped);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load users.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
 
   const handleViewPress = (user: VendorUserItem) => {
     setUserToView(user);
@@ -77,7 +107,7 @@ const Users = () => {
   const renderUserRow = ({ item }: { item: VendorUserItem }) => (
     <View style={styles.userRow}>
       <Image
-        source={{ uri: item.avatarUri ?? 'https://picsum.photos/seed/avatar/96/96' }}
+        source={getAvatarImageSource(item.avatarUri, item.name)}
         style={styles.avatar}
         resizeMode="cover"
       />
@@ -130,6 +160,22 @@ const Users = () => {
           { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          loading ? (
+            <View style={{ paddingTop: 24, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading users…</Text>
+            </View>
+          ) : error ? (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.errorRed, textAlign: 'center' }}>{error}</Text>
+            </View>
+          ) : (
+            <View style={{ paddingTop: 24 }}>
+              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>No users found.</Text>
+            </View>
+          )
+        }
       />
 
       {/* View user details popup */}

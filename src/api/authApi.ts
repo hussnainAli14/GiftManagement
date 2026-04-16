@@ -50,7 +50,7 @@ export async function signupApi(input: {
           email: input.email,
           phone: input.phoneNumber,
           password: input.password,
-          category: 'General',
+          category: 'other',
           businessName: input.fullName,
           businessAddress: 'Not provided',
           businessPhone: input.phoneNumber,

@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getReportsOverviewApi, type ReportsOverview } from '../../../api/reportsApi';
+import { colors } from '../../../theme';
 import {
   styles,
   CHART_HEIGHT,
@@ -24,44 +26,100 @@ const chartConfigBase = {
   propsForBackgroundLines: { strokeDasharray: '', stroke: '#E0E0E0', strokeWidth: 0.5 },
 };
 
-const lineChartData = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [
-    {
-      data: [1900, 2300, 1700, 2700, 2900, 3000],
-      color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
-      strokeWidth: 2,
-    },
-    {
-      data: [1200, 1500, 1100, 1600, 1800, 2000],
-      color: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-      strokeWidth: 2,
-    },
-  ],
-  legend: ['Sales (PKR)', 'Expenses (PKR)'],
-};
+function formatCompact(n: number, prefix = ''): string {
+  const num = Number.isFinite(n) ? n : 0;
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000) return `${prefix}${(num / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${prefix}${(num / 1_000).toFixed(1)}K`;
+  return `${prefix}${Math.round(num)}`;
+}
 
-const barChartData = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [{ data: [120, 180, 130, 230, 160, 200] }],
-};
-
-const pieData = [
-  { name: 'Vendor A', value: 45, color: '#1F2937', legendFontColor: CHART_LABEL_COLOR, legendFontSize: 12 },
-  { name: 'Vendor B', value: 30, color: '#EA580C', legendFontColor: CHART_LABEL_COLOR, legendFontSize: 12 },
-  { name: 'Vendor C', value: 25, color: REPORT_BLUE, legendFontColor: CHART_LABEL_COLOR, legendFontSize: 12 },
-];
-
-const summaryCards = [
-  { label: 'Total Sales', value: 'PKR 12.5K', trend: '+12.3%', up: true },
-  { label: 'New Users', value: '1.8K', trend: '+8.5%', up: true },
-  { label: 'Vendor Approvals', value: '55', trend: '+15.0%', up: true },
-  { label: 'Pending Orders', value: '230', trend: '-2.1%', up: false },
-];
+function clampArr(arr: number[] | undefined, len: number): number[] {
+  const a = Array.isArray(arr) ? arr : [];
+  if (a.length === len) return a;
+  if (a.length > len) return a.slice(0, len);
+  return [...a, ...Array.from({ length: len - a.length }, () => 0)];
+}
 
 const Reports = () => {
   const insets = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [overview, setOverview] = useState<ReportsOverview | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getReportsOverviewApi(6);
+        if (!cancelled) setOverview(data);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load reports.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const summaryCards = useMemo(() => {
+    const s = overview?.summaries;
+    return [
+      { label: 'Total Sales', value: s ? `PKR ${formatCompact(s.totalSales)}` : '—', trend: '', up: true },
+      { label: 'New Users', value: s ? formatCompact(s.newUsers) : '—', trend: '', up: true },
+      { label: 'Vendor Approvals', value: s ? String(s.vendorApprovals) : '—', trend: '', up: true },
+      { label: 'Pending Orders', value: s ? String(s.pendingOrders) : '—', trend: '', up: false },
+    ];
+  }, [overview]);
+
+  const lineChartData = useMemo(() => {
+    const labels = overview?.charts?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const sales = clampArr(overview?.charts?.monthlySales, labels.length);
+    const expenses = clampArr(overview?.charts?.monthlyExpenses, labels.length);
+    return {
+      labels,
+      datasets: [
+        {
+          data: sales,
+          color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
+          strokeWidth: 2,
+        },
+        {
+          data: expenses,
+          color: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+          strokeWidth: 2,
+        },
+      ],
+      legend: ['Sales (PKR)', 'Expenses (PKR)'],
+    };
+  }, [overview]);
+
+  const barChartData = useMemo(() => {
+    const labels = overview?.charts?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const data = clampArr(overview?.charts?.userGrowth, labels.length);
+    return { labels, datasets: [{ data }] };
+  }, [overview]);
+
+  const pieData = useMemo(() => {
+    const top = overview?.charts?.topVendors || [];
+    const colorsList = ['#1F2937', '#EA580C', REPORT_BLUE];
+    const normalized = top.slice(0, 3).map((v, idx) => ({
+      name: v.name || `Vendor ${idx + 1}`,
+      value: Number(v.value || 0),
+      color: colorsList[idx] || REPORT_BLUE,
+      legendFontColor: CHART_LABEL_COLOR,
+      legendFontSize: 12,
+    }));
+    if (normalized.length) return normalized;
+    return [
+      { name: '—', value: 1, color: '#E5E7EB', legendFontColor: CHART_LABEL_COLOR, legendFontSize: 12 },
+    ];
+  }, [overview]);
 
   const handleExport = () => {
     // TODO: Export reports
@@ -74,15 +132,30 @@ const Reports = () => {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
+        {loading ? (
+          <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading reports…</Text>
+          </View>
+        ) : null}
+        {error ? (
+          <View style={{ paddingVertical: 10 }}>
+            <Text style={{ color: colors.errorRed, textAlign: 'center' }}>{error}</Text>
+          </View>
+        ) : null}
+
         <Text style={styles.sectionTitle}>Overall Summaries</Text>
         <View style={styles.summaryGrid}>
           {summaryCards.map((card, index) => (
             <View key={index} style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>{card.label}</Text>
               <Text style={styles.summaryValue}>{card.value}</Text>
-              <Text style={card.up ? styles.trendUp : styles.trendDown}>
-                {card.up ? '↑ ' : '↓ '}{card.trend}
-              </Text>
+              {card.trend ? (
+                <Text style={card.up ? styles.trendUp : styles.trendDown}>
+                  {card.up ? '↑ ' : '↓ '}
+                  {card.trend}
+                </Text>
+              ) : null}
             </View>
           ))}
         </View>
