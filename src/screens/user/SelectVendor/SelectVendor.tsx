@@ -9,23 +9,44 @@ import { Button } from '../../../components';
 import type { PersonsWishlistItemData } from '../../../components/PersonsWishlistItem';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import { getVendorsApi, type VendorModel } from '../../../api/vendorApi';
+import { getVendorsNearUserApi, type VendorModel } from '../../../api/vendorApi';
+import { formatVendorLocation } from '../../../utils/formatVendorLocation';
+
+function normalizeRating(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
 
 function mapVendorToItem(v: VendorModel, index: number): VendorItem {
   const displayName = v.businessName || v.name || 'Vendor';
-  return {
+  const locationLabel = formatVendorLocation(v);
+  const rating = normalizeRating(v.averageRating);
+  const item: VendorItem = {
     id: v._id,
     name: displayName,
-    address: v.businessAddress || '—',
-    distance: '—',
     image: `https://picsum.photos/seed/vendor-${v._id}/${400 + (index % 5)}/200`,
+    rating,
+    locationLabel,
   };
+  if (typeof v.distanceKm === 'number' && Number.isFinite(v.distanceKm)) {
+    item.distanceKm = v.distanceKm;
+    item.distance = `${v.distanceKm.toFixed(1)} km away`;
+  }
+  return item;
 }
 
 /** Params may be missing if the screen opens without navigating from Gift Options. */
 export type SelectVendorParams = {
   item?: PersonsWishlistItemData;
   eventTitle?: string;
+  flow?: 'full' | 'contribute';
+  eventId?: string;
+  wishlistOwnerId?: string;
+  eventOwnerId?: string;
 };
 
 type SelectVendorStackParamList = {
@@ -35,37 +56,71 @@ type SelectVendorStackParamList = {
     vendor: VendorItem;
     eventTitle?: string;
   };
+  ContributionProgress: {
+    item: PersonsWishlistItemData;
+    eventTitle?: string;
+    eventId?: string;
+    wishlistOwnerId?: string;
+    eventOwnerId?: string;
+    vendorId: string;
+    vendorName?: string;
+  };
 };
 
 type SelectVendorRouteProp = RouteProp<SelectVendorStackParamList, 'SelectVendor'>;
 
 function parseSelectVendorParams(route: {
   params?: SelectVendorParams | undefined;
-}): { wishlistItem: PersonsWishlistItemData | undefined; eventTitle: string | undefined } {
+}) {
   const p = route.params;
   if (p == null || typeof p !== 'object') {
-    return { wishlistItem: undefined, eventTitle: undefined };
+    return {
+      wishlistItem: undefined as PersonsWishlistItemData | undefined,
+      eventTitle: undefined as string | undefined,
+      flow: 'full' as const,
+      eventId: undefined as string | undefined,
+      wishlistOwnerId: undefined as string | undefined,
+      eventOwnerId: undefined as string | undefined,
+    };
   }
   return {
     wishlistItem: p.item,
     eventTitle: p.eventTitle,
+    flow: p.flow ?? 'full',
+    eventId: p.eventId,
+    wishlistOwnerId: p.wishlistOwnerId,
+    eventOwnerId: p.eventOwnerId,
   };
 }
 
 const SelectVendor = () => {
   const route = useRoute<SelectVendorRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<SelectVendorStackParamList, 'SelectVendor'>>();
-  const { wishlistItem, eventTitle } = parseSelectVendorParams(route);
+  const { wishlistItem, eventTitle, flow, eventId, wishlistOwnerId, eventOwnerId } =
+    parseSelectVendorParams(route);
+  const isContributionFlow = flow === 'contribute';
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vendors, setVendors] = useState<VendorItem[]>([]);
   const [loading, setLoading] = useState(!!wishlistItem);
   const [fetchError, setFetchError] = useState(false);
+  const [emptyHint, setEmptyHint] = useState<string | undefined>();
+
+  const recipientUserId = wishlistOwnerId ?? eventOwnerId;
 
   useEffect(() => {
     if (!wishlistItem) {
       setVendors([]);
       setFetchError(false);
+      setEmptyHint(undefined);
+      setLoading(false);
+      return;
+    }
+
+    if (!recipientUserId) {
+      setVendors([]);
+      setFetchError(false);
+      setEmptyHint('Gift recipient is unknown. Cannot show nearby vendors.');
       setLoading(false);
       return;
     }
@@ -75,14 +130,24 @@ const SelectVendor = () => {
     const load = async () => {
       try {
         setFetchError(false);
-        const list = await getVendorsApi();
-        const approved = list.filter((v) => v.isApproved === true);
-        const mapped = approved.map((v, i) => mapVendorToItem(v, i));
-        if (!cancelled) setVendors(mapped);
+        setEmptyHint(undefined);
+        const { vendors: list, hasRecipientLocation } = await getVendorsNearUserApi(recipientUserId);
+        const mapped = list.map((v, i) => mapVendorToItem(v, i));
+        if (!cancelled) {
+          setVendors(mapped);
+          if (!hasRecipientLocation) {
+            setEmptyHint(
+              'This person has not set their location yet. Ask them to update their profile.',
+            );
+          } else if (mapped.length === 0) {
+            setEmptyHint('No vendors deliver near this person\'s location yet.');
+          }
+        }
       } catch {
         if (!cancelled) {
           setVendors([]);
           setFetchError(true);
+          setEmptyHint(undefined);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -92,7 +157,7 @@ const SelectVendor = () => {
     return () => {
       cancelled = true;
     };
-  }, [wishlistItem]);
+  }, [wishlistItem, recipientUserId]);
 
   const toggleVendor = (id: string) => {
     setSelectedId((prev) => (prev === id ? null : id));
@@ -104,11 +169,24 @@ const SelectVendor = () => {
 
   const handleProceed = () => {
     if (!wishlistItem || !selectedVendor) return;
+    if (isContributionFlow) {
+      navigation.navigate('ContributionProgress', {
+        item: wishlistItem,
+        eventTitle,
+        eventId,
+        wishlistOwnerId,
+        eventOwnerId,
+        vendorId: selectedVendor.id,
+        vendorName: selectedVendor.name,
+      });
+      return;
+    }
     navigation.navigate('ConfirmOrder', { item: wishlistItem, vendor: selectedVendor, eventTitle });
   };
 
   const renderVendorRow = ({ item: vendor }: { item: VendorItem }) => {
     const isSelected = selectedId === vendor.id;
+    const ratingLabel = normalizeRating(vendor.rating).toFixed(1);
     return (
       <TouchableOpacity
         style={styles.vendorCard}
@@ -122,13 +200,25 @@ const SelectVendor = () => {
         />
         <View style={styles.vendorContent}>
           <Text style={styles.vendorName}>{vendor.name}</Text>
-          <View style={styles.vendorAddress}>
-            <Icon name="location-on" size={16} color={colors.darkGray} />
-            <Text style={styles.vendorAddressText} numberOfLines={2}>
-              {vendor.address}
-            </Text>
+          <View style={styles.vendorMetaRow}>
+            <View style={styles.ratingRow}>
+              <Icon name="star" size={16} color={colors.primary} />
+              <Text style={styles.ratingText}>{ratingLabel}</Text>
+            </View>
+            {vendor.locationLabel ? (
+              <View style={styles.vendorAddress}>
+                <Icon name="location-on" size={16} color={colors.darkGray} />
+                <Text style={styles.vendorAddressText} numberOfLines={2}>
+                  {vendor.locationLabel}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.locationUnavailable}>Location not available</Text>
+            )}
+            {vendor.distance ? (
+              <Text style={styles.vendorDistance}>{vendor.distance}</Text>
+            ) : null}
           </View>
-          <Text style={styles.vendorDistance}>{vendor.distance}</Text>
         </View>
         <View
           style={[
@@ -158,7 +248,7 @@ const SelectVendor = () => {
 
   const emptyMessage = fetchError
     ? 'Could not load vendors. Check your connection and try again.'
-    : 'No approved vendors available yet.';
+    : emptyHint ?? 'No nearby vendors available for this gift recipient.';
 
   return (
     <View style={styles.container}>
@@ -189,7 +279,7 @@ const SelectVendor = () => {
           onPress={handleProceed}
           disabled={!selectedVendor}
         >
-          Proceed
+          {isContributionFlow ? 'Continue to contribution' : 'Proceed'}
         </Button>
       </View>
     </View>

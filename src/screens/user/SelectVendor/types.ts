@@ -1,7 +1,10 @@
 export interface VendorItem {
   id: string;
   name: string;
-  address: string;
-  distance: string;
   image: string;
+  rating: number;
+  locationLabel?: string;
+  address?: string;
+  distanceKm?: number;
+  distance?: string;
 }

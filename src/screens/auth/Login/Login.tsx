@@ -63,7 +63,23 @@ const Login = () => {
         },
       });
     } catch (error) {
-      Alert.alert('Login Failed', error instanceof Error ? error.message : 'Unable to login');
+      const message = error instanceof Error ? error.message : 'Unable to login';
+      const needsEmailVerification = /verify your email/i.test(message);
+
+      if (needsEmailVerification) {
+        Alert.alert('Login Failed', message, [
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.navigate('Verify', {
+                email: data.email.trim(),
+                role,
+              }),
+          },
+        ]);
+      } else {
+        Alert.alert('Login Failed', message);
+      }
     } finally {
       setIsSubmitting(false);
     }

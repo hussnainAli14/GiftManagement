@@ -38,13 +38,30 @@ export const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold as '700',
     color: colors.black,
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  vendorMetaRow: {
+    gap: 4,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.fontSize.sm,
+    color: colors.black,
   },
   vendorAddress: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
+  },
+  locationUnavailable: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.darkGray,
   },
   vendorAddressText: {
     fontFamily: typography.fontFamily.regular,

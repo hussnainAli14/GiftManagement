@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { getMyProfileApi, type UserProfile } from '../../../api/userApi';
 import { colors } from '../../../theme';
+import { hasUserLocation } from '../../../utils/hasUserLocation';
 import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
 import { styles } from './styles';
 
@@ -87,6 +88,12 @@ const MyProfile = () => {
             <View style={styles.row}>
               <Text style={styles.label}>Birthdate</Text>
               <Text style={styles.value}>{me?.birthdate?.trim() || '—'}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Location</Text>
+              <Text style={styles.value}>
+                {me && hasUserLocation(me) ? 'Added' : 'Not set'}
+              </Text>
             </View>
           </View>
         </ScrollView>

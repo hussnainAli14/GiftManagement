@@ -2,9 +2,16 @@ import { apiRequest, unwrapData } from './http';
 import { API_BASE_URL } from './config';
 import { tokenStorage } from './storage';
 
+export type ProductVendorRef = {
+  _id: string;
+  name?: string;
+  businessName?: string;
+  isApproved?: boolean;
+};
+
 export type ProductModel = {
   _id: string;
-  vendorId: string;
+  vendorId: string | ProductVendorRef;
   name: string;
   description?: string;
   image?: string;
@@ -36,6 +43,16 @@ export async function createProductApi(vendorId: string, input: {
   });
   const data = unwrapData<ProductModel | ProductModel[]>(res);
   return Array.isArray(data) ? data[0] : data;
+}
+
+/** All catalog products from vendors (public list). */
+export async function getAllProductsApi(): Promise<ProductModel[]> {
+  const res = await apiRequest<ProductModel[] | ProductModel | ProductResponse>('/products', {
+    auth: false,
+  });
+  if (Array.isArray(res)) return res;
+  const data = unwrapData<ProductModel[] | ProductModel>(res as ProductResponse);
+  return Array.isArray(data) ? data : [data];
 }
 
 export async function getVendorProductsApi(vendorId: string): Promise<ProductModel[]> {

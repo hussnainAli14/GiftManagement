@@ -7,6 +7,10 @@ export interface PersonsWishlistItemData {
   price: string;
   image: ImageSourcePropType | string;
   contributedPercent: number;
+  /** Contribution goal in PKR (defaults to item price). */
+  contributionTarget?: number;
+  /** Amount already contributed in PKR. */
+  contributionProgress?: number;
   /** Optional category for Gift Options screen (e.g. "Home & Kitchen") */
   category?: string;
 }

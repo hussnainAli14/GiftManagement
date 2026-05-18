@@ -9,12 +9,61 @@ export type VendorModel = {
   category?: string;
   isApproved?: boolean;
   description?: string;
+  area?: string;
+  city?: string;
+  country?: string;
+  location?: { lat?: number; lng?: number };
+  averageRating?: number;
+  reviewCount?: number;
+  distanceKm?: number;
 };
 
 /**
  * Public list: GET /api/vendors
  * Backend returns a raw array of Vendor documents.
  */
+export type VendorNearEntry = {
+  vendor: VendorModel;
+  distance: number;
+};
+
+type VendorsNearUserResponse = {
+  success?: boolean;
+  data?: VendorNearEntry[];
+  hasRecipientLocation?: boolean;
+  message?: string;
+};
+
+/**
+ * Vendors near a gift recipient (by user id), sorted closest first.
+ */
+export async function getVendorsNearUserApi(userId: string): Promise<{
+  vendors: VendorModel[];
+  hasRecipientLocation: boolean;
+}> {
+  const response = await apiRequest<VendorsNearUserResponse>(
+    `/vendors/near-user/${encodeURIComponent(userId)}`,
+    { auth: false },
+  );
+
+  const entries = Array.isArray(response?.data) ? response.data : [];
+  const vendors = entries
+    .map((entry) => {
+      const vendor = entry?.vendor;
+      if (!vendor?._id) return null;
+      return {
+        ...vendor,
+        distanceKm: entry.distance,
+      } as VendorModel & { distanceKm?: number };
+    })
+    .filter((v): v is VendorModel & { distanceKm?: number } => v != null);
+
+  return {
+    vendors,
+    hasRecipientLocation: response?.hasRecipientLocation === true,
+  };
+}
+
 export async function getVendorsApi(): Promise<VendorModel[]> {
   const data = await apiRequest<VendorModel[] | { data?: VendorModel[] }>('/vendors', {
     auth: false,

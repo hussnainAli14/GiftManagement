@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "719861474049",
+    "project_id": "gift-management-af7a9",
+    "storage_bucket": "gift-management-af7a9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:719861474049:android:f090a55ca71dc853f17100",
+        "android_client_info": {
+          "package_name": "com.giftmanagement"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-INjnANJLkpp2aWqHbiKQfegS_Q71HV8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

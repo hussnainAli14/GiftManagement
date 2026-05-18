@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useForm, Controller } from 'react-hook-form';
@@ -9,6 +9,7 @@ import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { RouteProp } from '@react-navigation/native';
 import { signupApi } from '../../../api/authApi';
+import { getDeviceLocationForSignup } from '../../../utils/getDeviceLocation';
 import type { AuthStackParamList, SignUpScreenNavigationProp, SignUpFormData } from '../Welcome/types';
 
 const SignUp = () => {
@@ -41,12 +42,16 @@ const SignUp = () => {
   const onSubmit = async (data: SignUpFormData) => {
     try {
       setIsSubmitting(true);
+
+      const location = await getDeviceLocationForSignup();
+
       const result = await signupApi({
         role,
         fullName: data.fullName.trim(),
         email: data.email.trim(),
         phoneNumber: data.phoneNumber.trim(),
         password: data.password,
+        location,
       });
       navigation.navigate('Verify', { email: result.email, role });
     } catch (error) {
@@ -211,6 +216,15 @@ const SignUp = () => {
             />
           )}
         />
+
+        <View style={styles.locationNotice}>
+          <Icon name="location-on" size={20} color={colors.primary} />
+          <Text style={styles.locationNoticeText}>
+            {role === 'vendor'
+              ? 'We will ask for your location when you continue so customers can find your business nearby.'
+              : 'We will ask for your location when you continue so friends can gift you from nearby vendors.'}
+          </Text>
+        </View>
 
         {/* Continue Button */}
         <View style={styles.buttonContainer}>

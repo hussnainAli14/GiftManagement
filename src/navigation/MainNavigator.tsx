@@ -16,6 +16,8 @@ import {
   CreateEventStep2,
   WishlistDetail,
   AddItem,
+  BrowseVendorProducts,
+  VendorProductDetail,
   EditItem,
   PersonsWishlist,
   GiftOptions,
@@ -24,7 +26,11 @@ import {
   Payment,
   OrderConfirmed,
   ContributionProgress,
+  RespondContributionInvite,
   ContributionSuccess,
+  VendorReview,
+  FriendContributionReview,
+  ReviewSubmittedSuccess,
   MyOrders,
   OrderDetail,
   Profile,
@@ -36,6 +42,9 @@ import {
   MessagesInbox,
   NewChat,
   ChatThread,
+  Wallet,
+  WalletEnterAmount,
+  WalletPaymentSuccess,
 } from '../screens/user';
 import type { ChatThreadParams } from './messagingParams';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
@@ -69,7 +78,7 @@ const EventsStack = () => {
         component={Events}
         options={({ navigation }) => ({
           headerShown: true,
-          headerTitle: 'My Events',
+          headerTitle: 'Events',
           ...getDefaultHeaderOptions(),
           headerRight: () => (
             <TouchableOpacity
@@ -117,28 +126,39 @@ const EventsStack = () => {
           headerTitle: (route.params as { wishlistName?: string })?.wishlistName ?? 'Birthday Wishlist',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                const eventId = (route.params as { eventId?: string })?.eventId;
-                Alert.alert('Add Item', 'Where do you want to add this item?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Wishlist',
-                    onPress: () => navigation.navigate('AddItem', { eventId, listType: 'wishlist' }),
-                  },
-                  {
-                    text: 'Non Wishlist',
-                    onPress: () => navigation.navigate('AddItem', { eventId, listType: 'nonWishlist' }),
-                  },
-                ]);
-              }}
-              style={{ marginRight: 16 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Icon name="add" size={24} color="#000000" />
-            </TouchableOpacity>
-          ),
+          headerRight: () => {
+            const eventId = (route.params as { eventId?: string })?.eventId;
+            if (!eventId) return null;
+            return (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('BrowseVendorProducts', { eventId })}
+                style={{ marginRight: 16 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon name="add" size={24} color="#000000" />
+              </TouchableOpacity>
+            );
+          },
+        })}
+      />
+      <Stack.Screen
+        name="BrowseVendorProducts"
+        component={BrowseVendorProducts}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Choose a product',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="VendorProductDetail"
+        component={VendorProductDetail}
+        options={({ navigation, route }) => ({
+          headerShown: true,
+          headerTitle: (route.params as { product?: { name?: string } })?.product?.name ?? 'Product',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
         })}
       />
       <Stack.Screen
@@ -149,18 +169,6 @@ const EventsStack = () => {
           headerTitle: 'Add Item',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                // TODO: Save item and go back
-                if (navigation.canGoBack()) navigation.goBack();
-              }}
-              style={{ marginRight: 16 }}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Icon name="save" size={24} color="#000000" />
-            </TouchableOpacity>
-          ),
         })}
       />
       <Stack.Screen
@@ -218,6 +226,36 @@ const EventsStack = () => {
         })}
       />
       <Stack.Screen
+        name="ContributionProgress"
+        component={ContributionProgress}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Contribution Progress',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="RespondContributionInvite"
+        component={RespondContributionInvite}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Contribution Request',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="FriendContributionReview"
+        component={FriendContributionReview}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Rate Contributor',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
         name="SelectVendor"
         component={SelectVendor}
         options={({ navigation }) => ({
@@ -246,6 +284,44 @@ const EventsStack = () => {
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
+      />
+      <Stack.Screen
+        name="WalletEnterAmount"
+        component={WalletEnterAmount}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Enter amount',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="WalletPaymentSuccess"
+        component={WalletPaymentSuccess}
+        options={{
+          headerShown: true,
+          headerTitle: 'Success',
+          ...getDefaultHeaderOptions(),
+        }}
+      />
+      <Stack.Screen
+        name="VendorReview"
+        component={VendorReview}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Rate Vendor',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="ReviewSubmittedSuccess"
+        component={ReviewSubmittedSuccess}
+        options={{
+          headerShown: true,
+          headerTitle: 'Review Submitted',
+          ...getDefaultHeaderOptions(),
+        }}
       />
       <Stack.Screen
         name="OrderConfirmed"
@@ -396,6 +472,28 @@ const HomeStack = () => {
         })}
       />
       <Stack.Screen
+        name="BrowseVendorProducts"
+        component={BrowseVendorProducts}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Choose a product',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="VendorProductDetail"
+        component={VendorProductDetail}
+        options={({ navigation, route }) => ({
+          headerShown: true,
+          headerTitle: (route.params as { product?: { name?: string } })?.product?.name ?? 'Product',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
         name="AddItem"
         component={AddItem}
         options={({ navigation }) => ({
@@ -403,6 +501,7 @@ const HomeStack = () => {
           headerTitle: 'Add Item',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
         })}
       />
       <Stack.Screen
@@ -413,6 +512,7 @@ const HomeStack = () => {
           headerTitle: 'Edit Item',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
+          tabBarStyle: { display: 'none' },
         })}
       />
       <Stack.Screen
@@ -431,6 +531,26 @@ const HomeStack = () => {
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: 'Contribution Progress',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="RespondContributionInvite"
+        component={RespondContributionInvite}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Contribution Request',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="FriendContributionReview"
+        component={FriendContributionReview}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Rate Contributor',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
@@ -464,6 +584,44 @@ const HomeStack = () => {
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
+      />
+      <Stack.Screen
+        name="WalletEnterAmount"
+        component={WalletEnterAmount}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Enter amount',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="WalletPaymentSuccess"
+        component={WalletPaymentSuccess}
+        options={{
+          headerShown: true,
+          headerTitle: 'Success',
+          ...getDefaultHeaderOptions(),
+        }}
+      />
+      <Stack.Screen
+        name="VendorReview"
+        component={VendorReview}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Rate Vendor',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="ReviewSubmittedSuccess"
+        component={ReviewSubmittedSuccess}
+        options={{
+          headerShown: true,
+          headerTitle: 'Review Submitted',
+          ...getDefaultHeaderOptions(),
+        }}
       />
       <Stack.Screen
         name="OrderConfirmed"
@@ -539,6 +697,45 @@ const ProfileStack = () => {
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
+      />
+      <Stack.Screen
+        name="WalletMain"
+        component={Wallet}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Wallet',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="WalletEnterAmount"
+        component={WalletEnterAmount}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Enter amount',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="Payment"
+        component={Payment}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Payment',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="WalletPaymentSuccess"
+        component={WalletPaymentSuccess}
+        options={{
+          headerShown: true,
+          headerTitle: 'Success',
+          ...getDefaultHeaderOptions(),
+        }}
       />
       <Stack.Screen
         name="MyProfile"

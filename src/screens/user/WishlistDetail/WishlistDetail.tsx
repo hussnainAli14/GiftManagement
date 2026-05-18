@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Tabs, WishlistDetailItem } from '../../../components';
 import type { WishlistDetailItemData } from '../../../components/WishlistDetailItem';
 import { getWishlistByEventApi } from '../../../api/wishlistApi';
+import { filterAvailableWishlistItems } from '../../../utils/isWishlistItemAvailable';
 import { getNonWishlistByEventApi } from '../../../api/nonWishlistApi';
 import { styles } from './styles';
 
@@ -40,7 +41,7 @@ const WishlistDetail = () => {
       ]);
 
       const mappedWishlist =
-        wishlist?.items?.map((item) => ({
+        filterAvailableWishlistItems(wishlist?.items ?? []).map((item) => ({
           id: item._id,
           title: item.title || 'Wishlist Item',
           price: `PKR ${item.price ?? 0}`,

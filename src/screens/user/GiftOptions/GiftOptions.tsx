@@ -1,23 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button } from '../../../components';
 import type { PersonsWishlistItemData } from '../../../components/PersonsWishlistItem';
 import { colors, typography } from '../../../theme';
+import { useAuth } from '../../../context/AuthContext';
 
 type GiftOptionsParams = {
   item: PersonsWishlistItemData;
   eventTitle?: string;
+  eventId?: string;
+  wishlistOwnerId?: string;
+  eventOwnerId?: string;
 };
 
-type GiftingMethod = 'full' | 'contribute';
+type GiftingMethod = 'full' | 'contribute' | 'pay_to_wallet';
 
 type GiftOptionsStackParamList = {
   GiftOptions: GiftOptionsParams | undefined;
-  SelectVendor: { item: PersonsWishlistItemData; eventTitle?: string };
-  ContributionProgress: { item: PersonsWishlistItemData; eventTitle?: string };
+  SelectVendor: {
+    item: PersonsWishlistItemData;
+    eventTitle?: string;
+    flow?: 'full' | 'contribute';
+    eventId?: string;
+    wishlistOwnerId?: string;
+    eventOwnerId?: string;
+  };
+  ContributionProgress: {
+    item: PersonsWishlistItemData;
+    eventTitle?: string;
+    eventId?: string;
+    wishlistOwnerId?: string;
+    eventOwnerId?: string;
+  };
+  WalletEnterAmount: {
+    mode: 'pay_to_wallet';
+    recipientUserId: string;
+    recipientName?: string;
+    eventId?: string;
+    eventTitle?: string;
+  };
 };
 
 type GiftOptionsRouteProp = RouteProp<GiftOptionsStackParamList, 'GiftOptions'>;
@@ -146,15 +170,41 @@ const styles = StyleSheet.create({
 const GiftOptions = () => {
   const route = useRoute<GiftOptionsRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<GiftOptionsStackParamList, 'GiftOptions'>>();
-  const { item, eventTitle } = route.params ?? { item: null };
+  const { user } = useAuth();
+  const { item, eventTitle, eventId, wishlistOwnerId, eventOwnerId } = route.params ?? { item: null };
   const [giftingMethod, setGiftingMethod] = useState<GiftingMethod>('full');
 
+  const recipientUserId = eventOwnerId ?? wishlistOwnerId;
+
   const handleConfirm = () => {
-    if (giftingMethod === 'full') {
-      navigation.navigate('SelectVendor', { item, eventTitle });
-    } else {
-      navigation.navigate('ContributionProgress', { item, eventTitle });
+    if (giftingMethod === 'pay_to_wallet') {
+      if (!recipientUserId) {
+        Alert.alert('Unavailable', 'Could not determine who should receive this payment.');
+        return;
+      }
+      if (user?.id && recipientUserId === user.id) {
+        Alert.alert(
+          'Unavailable',
+          'You cannot pay to your own wallet. Choose full gift or contribute instead.',
+        );
+        return;
+      }
+      navigation.navigate('WalletEnterAmount', {
+        mode: 'pay_to_wallet',
+        recipientUserId,
+        eventId,
+        eventTitle,
+      });
+      return;
     }
+    navigation.navigate('SelectVendor', {
+      item,
+      eventTitle,
+      flow: giftingMethod === 'contribute' ? 'contribute' : 'full',
+      eventId,
+      wishlistOwnerId,
+      eventOwnerId,
+    });
   };
 
   if (!item) {
@@ -218,6 +268,38 @@ const GiftOptions = () => {
             <Text style={styles.optionTitle}>Full Gift</Text>
             <Text style={styles.optionDescription}>
               Purchase the entire item as a gift for the recipient.
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={24} color={colors.darkGray} />
+        </TouchableOpacity>
+
+        {/* Pay to wallet */}
+        <TouchableOpacity
+          style={[
+            styles.optionCard,
+            giftingMethod === 'pay_to_wallet' ? styles.optionCardSelected : styles.optionCardUnselected,
+          ]}
+          onPress={() => setGiftingMethod('pay_to_wallet')}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.radioOuter,
+              giftingMethod === 'pay_to_wallet' ? styles.radioOuterSelected : styles.radioOuterUnselected,
+            ]}
+          >
+            {giftingMethod === 'pay_to_wallet' ? <View style={styles.radioInner} /> : null}
+          </View>
+          <Icon
+            name="account-balance-wallet"
+            size={24}
+            color={giftingMethod === 'pay_to_wallet' ? colors.primary : colors.darkGray}
+            style={styles.optionIcon}
+          />
+          <View style={styles.optionText}>
+            <Text style={styles.optionTitle}>Pay to wallet</Text>
+            <Text style={styles.optionDescription}>
+              Send any amount to the event host&apos;s wallet.
             </Text>
           </View>
           <Icon name="chevron-right" size={24} color={colors.darkGray} />

@@ -35,12 +35,15 @@ export async function loginApi(input: {
   return response.data;
 }
 
+export type SignupLocation = { lat: number; lng: number };
+
 export async function signupApi(input: {
   role: Role;
   fullName: string;
   email: string;
   phoneNumber: string;
   password: string;
+  location?: SignupLocation;
 }): Promise<{ email: string }> {
   const endpoint = input.role === 'vendor' ? '/auth/vendor/signup' : '/auth/user/signup';
   const body =
@@ -55,12 +58,16 @@ export async function signupApi(input: {
           businessAddress: 'Not provided',
           businessPhone: input.phoneNumber,
           description: 'New vendor',
+          lat: input.location?.lat,
+          lng: input.location?.lng,
         }
       : {
           name: input.fullName,
           email: input.email,
           phone: input.phoneNumber,
           password: input.password,
+          lat: input.location?.lat,
+          lng: input.location?.lng,
         };
 
   const response = await apiRequest<AuthResponse>(endpoint, {

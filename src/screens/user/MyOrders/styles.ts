@@ -12,6 +12,20 @@ export const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
   },
+  listContentEmpty: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.darkGray,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: 12,

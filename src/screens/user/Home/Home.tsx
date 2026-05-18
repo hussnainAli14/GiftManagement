@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { EventCard } from '../../../components';
@@ -11,6 +11,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useNotificationBadge } from '../../../context/NotificationBadgeContext';
 import { colors } from '../../../theme';
 import type { ChatThreadParams } from '../../../navigation/messagingParams';
+import { sortEventsByUpcoming } from '../../../utils/sortEventsByUpcoming';
 import { styles } from './styles';
 
 type HomeStackParamList = {
@@ -43,31 +44,32 @@ const Home = () => {
     navigation.navigate('PersonsWishlist', { eventTitle: event.name, eventId: event.id });
   };
 
-  useEffect(() => {
+  const loadEvents = useCallback(async () => {
     if (!user?.id) {
       setMyEvents([]);
       setEventsLoading(false);
       return;
     }
-    let cancelled = false;
     setEventsLoading(true);
-    const load = async () => {
-      try {
-        const events = await getMyEventsApi();
-        if (!cancelled) setMyEvents(events.map(toCardEvent));
-      } catch {
-        if (!cancelled) setMyEvents([]);
-      } finally {
-        if (!cancelled) setEventsLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const mine = await getMyEventsApi();
+      setMyEvents(sortEventsByUpcoming(mine).map(toCardEvent));
+    } catch {
+      setMyEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
   }, [user?.id]);
 
-  const upcomingEventsFromFriends = useMemo<Event[]>(() => [], []);
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents])
+  );
 
   const handleNotificationsPress = () => {
     navigation.navigate('Notifications');
@@ -117,28 +119,7 @@ const Home = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Upcoming Events From Friends Section */}
-        {upcomingEventsFromFriends.length > 0 && (
-          <>
-            <Text style={styles.firstSectionTitle}>Upcoming Events From Friends</Text>
-            {upcomingEventsFromFriends.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onPress={handleEventPress}
-              />
-            ))}
-          </>
-        )}
-
-        {/* My Events — heading always; list or empty message */}
-        <Text
-          style={
-            upcomingEventsFromFriends.length > 0 ? styles.sectionTitle : styles.firstSectionTitle
-          }
-        >
-          My Events
-        </Text>
+        <Text style={styles.firstSectionTitle}>Upcoming Events</Text>
         {eventsLoading ? (
           <ActivityIndicator style={styles.eventsLoading} color={colors.primary} />
         ) : myEvents.length > 0 ? (
@@ -151,7 +132,7 @@ const Home = () => {
           ))
         ) : (
           <Text style={styles.emptyEventsMessage}>
-            You don't have any events yet. Open the Events tab to create one.
+            You have not created any events yet. Open the Events tab and tap + to create one.
           </Text>
         )}
       </ScrollView>

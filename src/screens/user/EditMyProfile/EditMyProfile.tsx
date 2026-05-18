@@ -7,6 +7,9 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { getMyProfileApi, updateMyProfileApi, uploadMyAvatarApi, type UserProfile } from '../../../api/userApi';
 import { DatePicker, Dropdown, TextInput } from '../../../components';
 import { colors } from '../../../theme';
+import type { DeviceCoordinates } from '../../../utils/getDeviceLocation';
+import { getDeviceLocationForProfile } from '../../../utils/getDeviceLocation';
+import { getUserProfileCoordinates, hasUserLocation } from '../../../utils/hasUserLocation';
 import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
 import { styles } from './styles';
 
@@ -20,6 +23,9 @@ const EditMyProfile = () => {
   const [saving, setSaving] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [dob, setDob] = useState<Date | null>(null);
+  const [location, setLocation] = useState<DeviceCoordinates | null>(null);
+  const [hadLocationOnLoad, setHadLocationOnLoad] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const [form, setForm] = useState<Partial<UserProfile>>({
     name: '',
@@ -51,7 +57,10 @@ const EditMyProfile = () => {
         const me = await getMyProfileApi();
         if (cancelled) return;
         const parsedDob = parseBirthdate(me?.birthdate);
+        const savedLocation = getUserProfileCoordinates(me ?? {});
         setDob(parsedDob);
+        setLocation(savedLocation);
+        setHadLocationOnLoad(hasUserLocation(me ?? {}));
         setForm({
           name: me?.name || '',
           phone: me?.phone || '',
@@ -81,6 +90,21 @@ const EditMyProfile = () => {
     if (patch.avatar !== undefined) setAvatarBroken(false);
   }, []);
 
+  const pickLocation = useCallback(async () => {
+    setLocating(true);
+    try {
+      const coords = await getDeviceLocationForProfile();
+      setLocation(coords);
+    } catch (e) {
+      Alert.alert(
+        'Could not get location',
+        e instanceof Error ? e.message : 'Please try again.',
+      );
+    } finally {
+      setLocating(false);
+    }
+  }, []);
+
   const pickAvatar = useCallback(async () => {
     try {
       const res = await launchImageLibrary({
@@ -108,20 +132,24 @@ const EditMyProfile = () => {
   const onSave = useCallback(async () => {
     setSaving(true);
     try {
-      await updateMyProfileApi({
+      const payload: Parameters<typeof updateMyProfileApi>[0] = {
         name: String(form.name || '').trim(),
         phone: String(form.phone || '').trim(),
         avatar: String(form.avatar || '').trim(),
         gender: String(form.gender || '').trim(),
         birthdate: String(form.birthdate || '').trim(),
-      });
+      };
+      if (location) {
+        payload.location = { lat: location.lat, lng: location.lng };
+      }
+      await updateMyProfileApi(payload);
       navigation.goBack();
     } catch (e) {
       Alert.alert('Could not save profile', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setSaving(false);
     }
-  }, [form, navigation]);
+  }, [form, location, navigation]);
 
   const genderOptions = useMemo(
     () => [
@@ -200,6 +228,38 @@ const EditMyProfile = () => {
             selectedTextStyle={styles.bigInputText}
             leftIcon={<Icon name="calendar-today" size={18} color={colors.primaryMuted} />}
           />
+
+          {!hadLocationOnLoad ? (
+            <View style={styles.locationSection}>
+              <Text style={styles.locationLabel}>Location</Text>
+              <TouchableOpacity
+                style={[styles.locationInput, locating && styles.locationInputDisabled]}
+                activeOpacity={0.85}
+                onPress={pickLocation}
+                disabled={locating}
+              >
+                <Icon name="location-on" size={20} color={colors.primaryMuted} />
+                {location ? (
+                  <Text style={styles.locationInputText}>Location ready to save</Text>
+                ) : (
+                  <Text style={styles.locationPlaceholder}>
+                    {locating ? 'Getting your location...' : 'Use my current location'}
+                  </Text>
+                )}
+                {locating ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Icon name="my-location" size={20} color={colors.primaryMuted} />
+                )}
+              </TouchableOpacity>
+              <View style={styles.locationNotice}>
+                <Icon name="info-outline" size={18} color={colors.primary} />
+                <Text style={styles.locationNoticeText}>
+                  Add your location so friends can find nearby vendors when gifting you.
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.saveBtn, saving && styles.saveBtnDisabled]}

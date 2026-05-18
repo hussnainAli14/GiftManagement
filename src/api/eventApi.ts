@@ -6,7 +6,7 @@ export type EventModel = {
   date: string;
   type?: string;
   privacy?: string;
-  createdBy?: string;
+  createdBy?: string | { _id: string; name?: string; email?: string };
 };
 
 type EventResponse = {

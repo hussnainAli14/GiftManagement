@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { EventListItem } from '../../../components';
 import type { EventListItemData, EventStatus } from '../../../components/EventListItem';
 import { getEventsFeedApi, type EventModel } from '../../../api/eventApi';
+import { isEventPast } from '../../../utils/eventDate';
 import { styles } from './styles';
 
 type EventsStackParamList = {
@@ -16,8 +17,9 @@ type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList
 
 function toListItem(event: EventModel): EventListItemData {
   const eventDate = new Date(event.date);
-  const isPast = eventDate.getTime() < Date.now();
-  const status: EventStatus = eventDate.toString() === 'Invalid Date' ? 'draft' : isPast ? 'past' : 'upcoming';
+  const past = isEventPast(event.date);
+  const status: EventStatus =
+    eventDate.toString() === 'Invalid Date' ? 'draft' : past ? 'past' : 'upcoming';
   return {
     id: event._id,
     title: event.name,

@@ -13,7 +13,10 @@ import { useAuth } from '../../../context/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme';
 import { deleteWishlistItemApi } from '../../../api/wishlistApi';
+import { filterWishlistItemsForViewer } from '../../../utils/isWishlistItemAvailable';
 import { deleteNonWishlistItemApi } from '../../../api/nonWishlistApi';
+import { normalizeUserId } from '../../../utils/normalizeUserId';
+import type { ProductModel } from '../../../api/productApi';
 
 type PersonsWishlistRouteProp = RouteProp<
   { params: PersonsWishlistParams },
@@ -22,8 +25,15 @@ type PersonsWishlistRouteProp = RouteProp<
 
 type PersonsWishlistStackParamList = {
   PersonsWishlist: PersonsWishlistParams;
-  GiftOptions: { item: PersonsWishlistItemData; eventTitle?: string };
-  AddItem: { eventId?: string; listType?: 'wishlist' | 'nonWishlist' };
+  GiftOptions: {
+    item: PersonsWishlistItemData;
+    eventTitle?: string;
+    eventId?: string;
+    wishlistOwnerId?: string;
+    eventOwnerId?: string;
+  };
+  BrowseVendorProducts: { eventId: string };
+  VendorProductDetail: { product: ProductModel; eventId: string };
   EditItem: { item: any; listType?: 'wishlist' | 'nonWishlist' };
 };
 
@@ -41,6 +51,7 @@ const PersonsWishlist = () => {
   const [nonWishlistItems, setNonWishlistItems] = useState<PersonsWishlistItemData[]>([]);
   const [loading, setLoading] = useState(false);
   const [ownerUserId, setOwnerUserId] = useState<string | null>(null);
+  const [eventOwnerUserId, setEventOwnerUserId] = useState<string | null>(null);
 
   const contributedPercent = useCallback((item: Partial<WishlistItemModel>) => {
     const progress = item.contributionProgress ?? 0;
@@ -64,6 +75,8 @@ const PersonsWishlist = () => {
       price: formatPrice(item.price),
       image: item.image ?? 'https://picsum.photos/seed/wishlist/400/200',
       contributedPercent: contributedPercent(item),
+      contributionTarget: item.contributionTarget ?? item.price,
+      contributionProgress: item.contributionProgress ?? 0,
       category: item.category,
     }),
     [contributedPercent, formatPrice]
@@ -106,6 +119,7 @@ const PersonsWishlist = () => {
       setWishlistItems([]);
       setNonWishlistItems([]);
       setOwnerUserId(null);
+      setEventOwnerUserId(null);
       return;
     }
 
@@ -116,17 +130,29 @@ const PersonsWishlist = () => {
         getNonWishlistByEventApi(resolvedEventId),
       ]);
 
-      setWishlistItems((wishlist?.items ?? []).map(mapWishlistItem));
+      const ownerId =
+        normalizeUserId(wishlist?.userId) ?? normalizeUserId(nonWishlist?.userId) ?? null;
+      const eventOwnerId =
+        (wishlist?.eventId && typeof wishlist.eventId === 'object'
+          ? normalizeUserId(wishlist.eventId.createdBy)
+          : undefined) ?? ownerId;
+      const viewerIsOwner = !!user?.id && !!ownerId && user.id === ownerId;
+
+      setWishlistItems(
+        filterWishlistItemsForViewer(wishlist?.items ?? [], viewerIsOwner).map(mapWishlistItem)
+      );
       setNonWishlistItems((nonWishlist?.items ?? []).map(mapNonWishlistItem));
-      setOwnerUserId(wishlist?.userId?._id ?? nonWishlist?.userId?._id ?? null);
+      setOwnerUserId(ownerId);
+      setEventOwnerUserId(eventOwnerId);
     } catch {
       setWishlistItems([]);
       setNonWishlistItems([]);
       setOwnerUserId(null);
+      setEventOwnerUserId(null);
     } finally {
       setLoading(false);
     }
-  }, [resolvedEventId, mapWishlistItem, mapNonWishlistItem]);
+  }, [resolvedEventId, mapWishlistItem, mapNonWishlistItem, user?.id]);
 
   // Load when event changes.
   useEffect(() => {
@@ -159,15 +185,10 @@ const PersonsWishlist = () => {
           >
             <Icon name="share" size={24} color="#000000" />
           </TouchableOpacity>
-          {isOwner ? (
+          {isOwner && resolvedEventId ? (
             <TouchableOpacity
               onPress={() => {
-                const eventId = resolvedEventId;
-                Alert.alert('Add Item', 'Where do you want to add this item?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Wishlist', onPress: () => navigation.navigate('AddItem', { eventId, listType: 'wishlist' }) },
-                  { text: 'Non Wishlist', onPress: () => navigation.navigate('AddItem', { eventId, listType: 'nonWishlist' }) },
-                ]);
+                navigation.navigate('BrowseVendorProducts', { eventId: resolvedEventId });
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -181,7 +202,13 @@ const PersonsWishlist = () => {
 
   const handleItemPress = (item: PersonsWishlistItemData) => {
     if (activeTab === 'wishlist') {
-      navigation.navigate('GiftOptions', { item, eventTitle });
+      navigation.navigate('GiftOptions', {
+        item,
+        eventTitle,
+        eventId: resolvedEventId,
+        wishlistOwnerId: ownerUserId ?? undefined,
+        eventOwnerId: eventOwnerUserId ?? ownerUserId ?? undefined,
+      });
     }
   };
 
@@ -220,7 +247,11 @@ const PersonsWishlist = () => {
                 getWishlistByEventApi(resolvedEventId),
                 getNonWishlistByEventApi(resolvedEventId),
               ]);
-              setWishlistItems((wishlist?.items ?? []).map(mapWishlistItem));
+              const ownerId = wishlist?.userId?._id ?? null;
+              const viewerIsOwner = !!user?.id && !!ownerId && user.id === ownerId;
+              setWishlistItems(
+                filterWishlistItemsForViewer(wishlist?.items ?? [], viewerIsOwner).map(mapWishlistItem)
+              );
               setNonWishlistItems((nonWishlist?.items ?? []).map(mapNonWishlistItem));
             }
           } catch (error) {
@@ -234,8 +265,8 @@ const PersonsWishlist = () => {
   const renderItem = ({ item }: { item: PersonsWishlistItemData }) => (
     <PersonsWishlistItem
       item={item}
-      onPress={activeTab === 'wishlist' ? handleItemPress : undefined}
-      showContributed={activeTab === 'wishlist'}
+      onPress={activeTab === 'wishlist' && !isOwner ? handleItemPress : undefined}
+      showContributed={false}
       showActions={isOwner}
       onEdit={handleEdit}
       onDelete={handleDelete}

@@ -51,6 +51,53 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.notificationGray,
   },
+  locationSection: {
+    marginBottom: 16,
+  },
+  locationLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.black,
+    marginBottom: 8,
+  },
+  locationInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  locationInputDisabled: {
+    opacity: 0.7,
+  },
+  locationInputText: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.notificationGray,
+  },
+  locationPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  locationNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: colors.lightGray,
+  },
+  locationNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.darkGray,
+    lineHeight: 18,
+  },
   saveBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 14,

@@ -9,10 +9,17 @@ import { styles } from './styles';
 import { DEFAULT_DELIVERY, parsePrice } from './types';
 import type { ConfirmOrderParams } from './types';
 import { colors } from '../../../theme';
+import { hasDisplayValue } from '../../../utils/hasDisplayValue';
 
 type ConfirmOrderStackParamList = {
   ConfirmOrder: ConfirmOrderParams;
-  Payment: { amount: number; description: string; isFullGift: boolean };
+  Payment: {
+    amount: number;
+    description: string;
+    isFullGift: boolean;
+    wishlistItemId?: string;
+    vendorId?: string;
+  };
 };
 
 type ConfirmOrderRouteProp = RouteProp<
@@ -50,6 +57,9 @@ const ConfirmOrder = () => {
       amount: total,
       description,
       isFullGift: true,
+      wishlistItemId: item.id,
+      vendorId: vendor.id,
+      vendorName: vendor.name,
     });
   };
 
@@ -85,10 +95,12 @@ const ConfirmOrder = () => {
             <Icon name="store" size={18} color={colors.darkGray} />
             <Text style={styles.vendorText}>{vendor.name}</Text>
           </View>
-          <View style={styles.vendorRow}>
-            <Icon name="location-on" size={18} color={colors.darkGray} />
-            <Text style={styles.vendorText}>{vendor.address}</Text>
-          </View>
+          {hasDisplayValue(vendor.address) ? (
+            <View style={styles.vendorRow}>
+              <Icon name="location-on" size={18} color={colors.darkGray} />
+              <Text style={styles.vendorText}>{vendor.address}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Delivery Address */}

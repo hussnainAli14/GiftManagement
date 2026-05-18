@@ -16,6 +16,7 @@ import { colors } from '../../../theme';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
+  WalletMain: undefined;
   ChangePassword: undefined;
   MyProfile: undefined;
   EditMyProfile: undefined;
@@ -158,6 +159,13 @@ const Profile = () => {
           title="Manage Account"
           subtitle="Update personal info and preferences"
           onPress={handleManageAccount}
+          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
+        />
+        <SettingRow
+          icon="account-balance-wallet"
+          title="Wallet"
+          subtitle="Balance, top-ups, and payments received"
+          onPress={() => navigation.navigate('WalletMain')}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
         <SettingRow

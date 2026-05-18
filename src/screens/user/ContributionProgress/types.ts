@@ -1,8 +1,15 @@
 import type { PersonsWishlistItemData } from '../../../components/PersonsWishlistItem';
 
 export interface ContributionProgressParams {
-  item: PersonsWishlistItemData;
+  item?: PersonsWishlistItemData;
+  wishlistItemId?: string;
+  campaignId?: string;
   eventTitle?: string;
+  eventId?: string;
+  wishlistOwnerId?: string;
+  eventOwnerId?: string;
+  vendorId?: string;
+  vendorName?: string;
 }
 
 export interface ContributorEntry {

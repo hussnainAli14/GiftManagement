@@ -34,8 +34,10 @@ export async function getMyVendorOrdersApi(): Promise<BackendOrder[]> {
 export type OrderItemModel = {
   productId?: { name?: string; price?: number; image?: string };
   giftId?: { name?: string; price?: number; image?: string };
-  quantity?: number;
+  title?: string;
   price?: number;
+  image?: string;
+  quantity?: number;
 };
 
 export type OrderUserRef = { _id?: string; name?: string; email?: string };
@@ -54,6 +56,34 @@ export async function getMyOrdersApi(userId: string): Promise<OrderModel[]> {
   const response = await apiRequest<unknown>(`/orders/user/${userId}`, { auth: true });
   const data = unwrapData<OrderModel[] | OrderModel>(response);
   return Array.isArray(data) ? data : [data];
+}
+
+export async function createWishlistGiftOrderApi(input: {
+  wishlistItemId: string;
+  vendorId?: string;
+  totalAmount: number;
+  giftMessage?: string;
+}): Promise<OrderModel> {
+  const response = await apiRequest<unknown>('/orders/wishlist-gift', {
+    method: 'POST',
+    auth: true,
+    body: input,
+  });
+  return unwrapData<OrderModel>(response);
+}
+
+export async function createWishlistContributionOrderApi(input: {
+  wishlistItemId: string;
+  amount: number;
+  giftMessage?: string;
+  campaignId?: string;
+}): Promise<OrderModel> {
+  const response = await apiRequest<unknown>('/orders/wishlist-contribution', {
+    method: 'POST',
+    auth: true,
+    body: input,
+  });
+  return unwrapData<OrderModel>(response);
 }
 
 /** Orders between the current user and `userId` (gift buyer ↔ recipient). */

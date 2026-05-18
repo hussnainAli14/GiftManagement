@@ -13,6 +13,14 @@ export type UserProfile = {
   gender?: string;
   interests?: string[];
   notificationsEnabled?: boolean;
+  lat?: number;
+  lng?: number;
+  location?: { lat?: number; lng?: number };
+};
+
+export type UpdateMyProfilePayload = Partial<UserProfile> & {
+  lat?: number;
+  lng?: number;
 };
 
 export async function getMyProfileApi(): Promise<UserProfile> {
@@ -20,7 +28,7 @@ export async function getMyProfileApi(): Promise<UserProfile> {
   return unwrapData<UserProfile>(response);
 }
 
-export async function updateMyProfileApi(payload: Partial<UserProfile>): Promise<UserProfile> {
+export async function updateMyProfileApi(payload: UpdateMyProfilePayload): Promise<UserProfile> {
   const response = await apiRequest<unknown>('/users/profile', {
     method: 'PUT',
     auth: true,

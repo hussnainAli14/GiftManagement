@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import { navNavigate } from '../navigation/navigationRef';
+import type { BackendNotification } from '../api/notificationApi';
+import { navigateFromNotification } from '../navigation/notificationNavigation';
 
 type RemoteMessage = any;
 
@@ -79,17 +80,16 @@ export async function getFcmToken(): Promise<string> {
 }
 
 export async function handleNotificationOpen(data: Record<string, string | undefined>) {
-  const kind = data.kind || data.type;
-  if (kind === 'message' && data.peerUserId && data.peerName) {
-    navNavigate('ChatThread', {
-      peerUserId: data.peerUserId,
-      peerName: data.peerName,
-      peerAvatar: data.peerAvatar || '',
-    });
-    return;
-  }
-  // Default: go to in-app notifications list
-  navNavigate('Notifications');
+  const notification: BackendNotification = {
+    _id: '',
+    title: data.title || '',
+    message: data.message || data.body || '',
+    read: true,
+    createdAt: new Date().toISOString(),
+    type: data.type,
+    data,
+  };
+  navigateFromNotification(notification);
 }
 
 export function wireForegroundAndOpenedHandlers(opts?: { onForegroundMessage?: () => void }) {

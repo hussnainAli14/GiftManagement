@@ -13,7 +13,23 @@ import {
 } from '../../../api/notificationApi';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotificationBadge } from '../../../context/NotificationBadgeContext';
+import { navigateFromNotification, resolveNotificationKind } from '../../../navigation/notificationNavigation';
+import { formatContributionInviteMessage } from '../../../utils/formatContributionInviteMessage';
 import { styles } from './styles';
+
+function displayNotificationMessage(item: BackendNotification): string {
+  const kind = resolveNotificationKind(item);
+  if (kind === 'contribution_invite') {
+    const d = (item.data || {}) as Record<string, string | undefined>;
+    return formatContributionInviteMessage({
+      message: item.message,
+      organizerName: d.organizerName,
+      itemTitle: d.itemTitle,
+      eventTitle: d.eventTitle,
+    });
+  }
+  return item.message;
+}
 
 type Nav = NativeStackNavigationProp<any>;
 
@@ -31,7 +47,7 @@ const Notifications = () => {
       result.map((item) => ({
         id: item._id,
         title: item.title,
-        description: item.message,
+        description: displayNotificationMessage(item),
         timestamp: new Date(item.createdAt).toLocaleString(),
         isUnread: !item.read,
         icon: item.type === 'order' ? 'order' : item.type === 'gift' ? 'gift' : 'bell',
@@ -56,57 +72,6 @@ const Notifications = () => {
 
   const byId = useMemo(() => new Map(raw.map((n) => [n._id, n])), [raw]);
 
-  const goTab = (tabName: string, screenName?: string, params?: any) => {
-    const parent = navigation.getParent();
-    if (parent && screenName) {
-      parent.navigate(tabName as never, { screen: screenName, params } as never);
-      return;
-    }
-    if (parent) {
-      parent.navigate(tabName as never);
-      return;
-    }
-    if (screenName) {
-      navigation.navigate(screenName as never, params as never);
-    }
-  };
-
-  const navigateFrom = (n: BackendNotification) => {
-    const d = (n.data || {}) as Record<string, string | undefined>;
-    const kind = d.kind || n.type || '';
-
-    if (kind === 'message' && d.peerUserId && d.peerName) {
-      navigation.navigate('ChatThread', {
-        peerUserId: d.peerUserId,
-        peerName: d.peerName,
-        peerAvatar: d.peerAvatar || '',
-      });
-      return;
-    }
-    if (kind === 'friend_request' || kind === 'friend_accepted') {
-      goTab('Friends', 'FriendsMain');
-      return;
-    }
-    if (kind === 'event_reminder') {
-      goTab('Events', 'EventsMain');
-      return;
-    }
-    if (kind === 'contribution_received') {
-      goTab('Home', 'ContributionProgress');
-      return;
-    }
-    if (kind === 'public_wishlist' || kind === 'friends_wishlist' || kind === 'wishlist_update') {
-      goTab('Events', 'EventsMain');
-      return;
-    }
-    if (kind === 'password_changed' || kind === 'profile_updated') {
-      goTab('Profile', 'ProfileMain');
-      return;
-    }
-    // Default
-    goTab('Home', 'HomeMain');
-  };
-
   const handleNotificationPress = async (notification: Notification) => {
     try {
       await markNotificationReadApi(notification.id);
@@ -120,7 +85,7 @@ const Notifications = () => {
 
     const full = byId.get(notification.id);
     if (full) {
-      navigateFrom(full);
+      navigateFromNotification(full, navigation);
     }
   };
 

@@ -16,7 +16,7 @@ export type WishlistItemModel = {
   // Backend schema uses `allowsContribution`
   allowsContribution?: boolean;
   category?: string;
-  status?: string;
+  status?: 'available' | 'locked' | 'gifted' | string;
 };
 
 export type WishlistModel = {
@@ -26,6 +26,7 @@ export type WishlistModel = {
     _id: string;
     name?: string;
     date?: string;
+    createdBy?: string;
   };
   items: WishlistItemModel[];
 };
@@ -113,5 +114,20 @@ export async function deleteWishlistItemApi(itemId: string): Promise<void> {
   await apiRequest(`/wishlists/item/${itemId}`, {
     method: 'DELETE',
     auth: true,
+  });
+}
+
+export async function markWishlistItemGiftedApi(itemId: string): Promise<void> {
+  await apiRequest(`/wishlists/item/${itemId}/gift`, {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+export async function contributeToWishlistItemApi(itemId: string, amount: number): Promise<void> {
+  await apiRequest(`/wishlists/item/${itemId}/contribute`, {
+    method: 'POST',
+    auth: true,
+    body: { amount },
   });
 }

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,13 +8,21 @@ import { Button } from '../../../components';
 import { styles } from './styles';
 import type { PaymentParams, PaymentMethod } from './types';
 import { colors } from '../../../theme';
+import {
+  createWishlistContributionOrderApi,
+  createWishlistGiftOrderApi,
+} from '../../../api/orderApi';
+import { abandonContributionPaymentApi } from '../../../api/contributionCampaignApi';
+import { topUpWalletApi, payToWalletApi } from '../../../api/walletApi';
 
 type PaymentRouteProp = RouteProp<{ params: PaymentParams }, 'params'>;
 
 type PaymentStackParamList = {
   Payment: PaymentParams;
+  VendorReview: { vendorId: string; vendorName?: string };
   OrderConfirmed: undefined;
   ContributionSuccess: { eventTitle?: string };
+  WalletPaymentSuccess: { mode?: 'topup' | 'pay_to_wallet'; amount?: number };
 };
 
 const formatPkr = (n: number) =>
@@ -29,15 +37,31 @@ const WALLET_OPTIONS: { id: PaymentMethod; label: string; icon: string }[] = [
 const Payment = () => {
   const route = useRoute<PaymentRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<PaymentStackParamList, 'Payment'>>();
-  const { amount, description, isFullGift, isContribution = false, eventTitle } = route.params ?? {
-    amount: 0,
-    description: '',
-    isFullGift: false,
-    isContribution: false,
-    eventTitle: undefined,
-  };
+  const params = route.params;
+  const amountDue =
+    typeof params?.amount === 'number' && Number.isFinite(params.amount) ? params.amount : 0;
+  const description = params?.description ?? '';
+  const isFullGift = params?.isFullGift === true;
+  const isContribution = params?.isContribution === true;
+  const eventTitle = params?.eventTitle;
+  const wishlistItemId = params?.wishlistItemId;
+  const vendorId = params?.vendorId;
+  const vendorName = params?.vendorName;
+  const campaignId = params?.campaignId;
+  const isFriendCampaignPledge = params?.isFriendCampaignPledge === true;
+  const isWalletTopUp = params?.isWalletTopUp === true;
+  const isPayToWallet = params?.isPayToWallet === true;
+  const payToWalletRecipientId = params?.payToWalletRecipientId;
+  const eventId = params?.eventId;
 
+  const isWalletPayToUser =
+    isPayToWallet ||
+    (description.toLowerCase().startsWith('pay to wallet') && !!payToWalletRecipientId);
+  const isWalletCheckout = isWalletTopUp || isWalletPayToUser;
+
+  const paymentCompletedRef = useRef(false);
   const [cardNumber, setCardNumber] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [mmYY, setMmYY] = useState('');
   const [cvv, setCvv] = useState('');
   const [saveCard, setSaveCard] = useState(false);
@@ -48,10 +72,119 @@ const Payment = () => {
     /^\d{2}\/\d{2}$/.test(mmYY.trim()) &&
     cvv.trim().length >= 3;
 
-  const canPay = cardComplete || selectedMethod !== null;
+  const canPay = (cardComplete || selectedMethod !== null) && !isSubmitting;
 
-  const handlePayNow = () => {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (paymentCompletedRef.current) return;
+      if (!isFriendCampaignPledge || !campaignId) return;
+
+      e.preventDefault();
+      abandonContributionPaymentApi(campaignId)
+        .catch(() => {})
+        .finally(() => {
+          navigation.dispatch(e.data.action);
+        });
+    });
+    return unsubscribe;
+  }, [navigation, isFriendCampaignPledge, campaignId]);
+
+  const handlePayNow = async () => {
     if (!canPay) return;
+
+    if (isWalletCheckout && amountDue <= 0) {
+      Alert.alert('Invalid amount', 'Please enter a valid amount greater than zero.');
+      return;
+    }
+
+    if (isWalletTopUp) {
+      setIsSubmitting(true);
+      try {
+        await topUpWalletApi(amountDue);
+        paymentCompletedRef.current = true;
+        navigation.navigate('WalletPaymentSuccess', { mode: 'topup', amount: amountDue });
+      } catch (error) {
+        Alert.alert(
+          'Payment failed',
+          error instanceof Error ? error.message : 'Unable to top up your wallet.',
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (isWalletPayToUser) {
+      if (!payToWalletRecipientId) {
+        Alert.alert(
+          'Payment unavailable',
+          'Could not determine who should receive this payment. Please go back and try again.',
+        );
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        await payToWalletApi({
+          recipientUserId: payToWalletRecipientId,
+          amount: amountDue,
+          eventId,
+          eventTitle,
+        });
+        paymentCompletedRef.current = true;
+        navigation.navigate('WalletPaymentSuccess', {
+          mode: 'pay_to_wallet',
+          amount: amountDue,
+        });
+      } catch (error) {
+        Alert.alert(
+          'Payment failed',
+          error instanceof Error ? error.message : 'Unable to complete this payment.',
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (wishlistItemId) {
+      setIsSubmitting(true);
+      try {
+        if (isFullGift) {
+          await createWishlistGiftOrderApi({
+            wishlistItemId,
+            vendorId,
+            totalAmount: amountDue,
+            giftMessage: description,
+          });
+        } else if (isContribution) {
+          await createWishlistContributionOrderApi({
+            wishlistItemId,
+            amount: amountDue,
+            giftMessage: description,
+            campaignId,
+          });
+        }
+      } catch (error) {
+        Alert.alert(
+          'Payment failed',
+          error instanceof Error ? error.message : 'Unable to complete this gift.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+      setIsSubmitting(false);
+      paymentCompletedRef.current = true;
+    }
+
+    if (vendorId) {
+      navigation.navigate('VendorReview', {
+        vendorId,
+        vendorName,
+      });
+      return;
+    }
+
     if (isFullGift) {
       navigation.navigate('OrderConfirmed');
     } else if (isContribution) {
@@ -71,7 +204,7 @@ const Payment = () => {
         {/* Amount Due */}
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Amount Due</Text>
-          <Text style={styles.amountValue}>{formatPkr(amount)}</Text>
+          <Text style={styles.amountValue}>{formatPkr(amountDue)}</Text>
           <Text style={styles.amountDescription}>{description}</Text>
         </View>
 
@@ -166,7 +299,11 @@ const Payment = () => {
           style={styles.payButton}
           disabled={!canPay}
         >
-          Pay Now
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            'Pay Now'
+          )}
         </Button>
       </ScrollView>
     </View>

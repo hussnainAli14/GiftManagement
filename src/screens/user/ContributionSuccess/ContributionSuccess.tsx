@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useCallback, useLayoutEffect } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,6 +25,29 @@ const ContributionSuccess = () => {
   const route = useRoute<ContributionSuccessRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<ContributionSuccessStackParamList, 'ContributionSuccess'>>();
   const { eventTitle } = route.params ?? {};
+
+  const goToHome = useCallback(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.navigate('Home' as never, { screen: 'HomeMain' } as never);
+      return;
+    }
+    navigation.navigate('HomeMain' as never);
+  }, [navigation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={goToHome}
+          style={{ marginRight: 16 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon name="chevron-left" size={24} color="#000000" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, goToHome]);
 
   const handleBackToWishlist = () => {
     navigation.navigate('PersonsWishlist', { eventTitle: eventTitle ?? "Person's wishlist" });
