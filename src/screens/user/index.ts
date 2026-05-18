@@ -2,6 +2,7 @@ export { Home } from './Home';
 export { Events } from './Events';
 export { Friends } from './Friends';
 export { Profile } from './Profile/index';
+export { MyReviews } from './MyReviews/index';
 export { Wallet } from './Wallet/index';
 export { WalletEnterAmount } from './WalletEnterAmount/index';
 export { WalletPaymentSuccess } from './WalletPaymentSuccess/index';

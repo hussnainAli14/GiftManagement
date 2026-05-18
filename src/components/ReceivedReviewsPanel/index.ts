@@ -1,0 +1,1 @@
+export { ReceivedReviewsPanel } from './ReceivedReviewsPanel';

@@ -16,6 +16,7 @@ import {
   Reports,
   VendorProfile,
 } from '../screens/vendor';
+import { MyReviews } from '../screens/user';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
 import { typography } from '../theme';
 
@@ -74,6 +75,16 @@ const DashboardStack = () => (
       options={({ navigation }) => ({
         headerShown: true,
         headerTitle: 'Vendor Profile',
+        ...getDefaultHeaderOptions(),
+        headerLeft: getHeaderBackButton(navigation),
+      })}
+    />
+    <Stack.Screen
+      name="MyReviews"
+      component={MyReviews}
+      options={({ navigation }) => ({
+        headerShown: true,
+        headerTitle: 'My Reviews',
         ...getDefaultHeaderOptions(),
         headerLeft: getHeaderBackButton(navigation),
       })}

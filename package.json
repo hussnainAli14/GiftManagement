@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "reset-start": "npm run start --reset",
     "android": "react-native run-android",
+    "backend":"cd Online-gift-backend/ && npm run start",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

@@ -17,6 +17,7 @@ import { colors } from '../../../theme';
 type ProfileStackParamList = {
   ProfileMain: undefined;
   WalletMain: undefined;
+  MyReviews: undefined;
   ChangePassword: undefined;
   MyProfile: undefined;
   EditMyProfile: undefined;
@@ -180,6 +181,13 @@ const Profile = () => {
           title="Change Password"
           subtitle="Update your account password"
           onPress={handleChangePassword}
+          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
+        />
+        <SettingRow
+          icon="rate-review"
+          title="My Reviews"
+          subtitle="Ratings and reviews others left for you"
+          onPress={() => navigation.navigate('MyReviews')}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
 

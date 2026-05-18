@@ -72,3 +72,24 @@ export async function getCampaignPeerReviewsApi(
   );
   return unwrapData<Pick<ContributionPeerReview, 'revieweeId' | 'rating' | 'comment'>[]>(response);
 }
+
+export type ReceivedReviewItem = {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt?: string;
+  reviewerName: string;
+  contextLabel?: string;
+  source: 'vendor' | 'contribution';
+};
+
+export type MyReceivedReviews = {
+  averageRating: number | null;
+  reviewCount: number;
+  reviews: ReceivedReviewItem[];
+};
+
+export async function getMyReceivedReviewsApi(): Promise<MyReceivedReviews> {
+  const response = await apiRequest<unknown>('/reviews/received/me', { auth: true });
+  return unwrapData<MyReceivedReviews>(response);
+}

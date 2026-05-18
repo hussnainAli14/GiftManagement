@@ -24,3 +24,4 @@ export * from './DropDown';
 export * from './RadioButton';
 export * from './DatePicker';
 export * from './Tabs';
+export * from './ReceivedReviewsPanel';

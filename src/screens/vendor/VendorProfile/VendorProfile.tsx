@@ -1,12 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { getMyVendorProfileApi, type VendorModel } from '../../../api/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
+
+type VendorProfileStackParamList = {
+  VendorProfile: undefined;
+  MyReviews: undefined;
+};
 
 function labelOrDash(v: unknown): string {
   const s = String(v ?? '').trim();
@@ -15,6 +22,7 @@ function labelOrDash(v: unknown): string {
 
 export const VendorProfile = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<VendorProfileStackParamList, 'VendorProfile'>>();
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -76,6 +84,21 @@ export const VendorProfile = () => {
             </View>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.menuRow}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('MyReviews')}
+        >
+          <View style={styles.menuRowIcon}>
+            <Icon name="rate-review" size={22} color={colors.darkGray} />
+          </View>
+          <View style={styles.menuRowContent}>
+            <Text style={styles.menuRowTitle}>My Reviews</Text>
+            <Text style={styles.menuRowSubtitle}>Ratings and reviews from customers</Text>
+          </View>
+          <Icon name="chevron-right" size={24} color={colors.darkGray} />
+        </TouchableOpacity>
 
         {loading ? (
           <View style={styles.loadingWrap}>

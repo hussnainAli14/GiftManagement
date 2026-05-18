@@ -45,6 +45,7 @@ import {
   Wallet,
   WalletEnterAmount,
   WalletPaymentSuccess,
+  MyReviews,
 } from '../screens/user';
 import type { ChatThreadParams } from './messagingParams';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
@@ -763,6 +764,16 @@ const ProfileStack = () => {
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: 'Change Password',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="MyReviews"
+        component={MyReviews}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'My Reviews',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
