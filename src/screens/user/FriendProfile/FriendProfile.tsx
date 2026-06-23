@@ -25,6 +25,7 @@ import { getUserByIdApi } from '../../../api/userApi';
 import type { UserProfile } from '../../../api/userApi';
 import { getEventsByUserApi, type EventModel } from '../../../api/eventApi';
 import { getWishlistByEventApi } from '../../../api/wishlistApi';
+import { filterAvailableWishlistItems } from '../../../utils/isWishlistItemAvailable';
 import type { WishlistItemModel } from '../../../api/wishlistApi';
 import { getGiftHistoryWithUserApi } from '../../../api/orderApi';
 import type { OrderModel } from '../../../api/orderApi';
@@ -213,7 +214,7 @@ const FriendProfile = () => {
             ? String((wl.userId as { _id: string })._id)
             : String(wl.userId ?? '');
         if (owner !== friendId) return;
-        wl.items.forEach((it: WishlistItemModel, j: number) => {
+        filterAvailableWishlistItems(wl.items).forEach((it: WishlistItemModel, j: number) => {
           const id = typeof it._id === 'string' ? it._id : `i-${idx}-${j}`;
           if (seen.has(id)) return;
           seen.add(id);

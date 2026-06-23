@@ -48,3 +48,34 @@ export async function createEventApi(input: {
   });
   return unwrapData<EventModel>(response);
 }
+
+export async function getEventByIdApi(eventId: string): Promise<EventModel> {
+  const response = await apiRequest<EventResponse>(`/events/${encodeURIComponent(eventId)}`, {
+    auth: true,
+  });
+  return unwrapData<EventModel>(response);
+}
+
+export async function updateEventApi(
+  eventId: string,
+  input: {
+    name?: string;
+    date?: string;
+    type?: string;
+    privacy?: string;
+  },
+): Promise<EventModel> {
+  const response = await apiRequest<EventResponse>(`/events/${encodeURIComponent(eventId)}`, {
+    method: 'PUT',
+    auth: true,
+    body: input,
+  });
+  return unwrapData<EventModel>(response);
+}
+
+export async function deleteEventApi(eventId: string): Promise<void> {
+  await apiRequest<EventResponse>(`/events/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}

@@ -43,9 +43,22 @@ export async function signupApi(input: {
   email: string;
   phoneNumber: string;
   password: string;
-  location?: SignupLocation;
+  location: SignupLocation;
+  cityId?: string;
+  cityName?: string;
+  province?: string;
+  businessAddress?: string;
 }): Promise<{ email: string }> {
+  if (!input.location?.lat || !input.location?.lng) {
+    throw new Error('Please select your city before continuing.');
+  }
   const endpoint = input.role === 'vendor' ? '/auth/vendor/signup' : '/auth/user/signup';
+  const englishAddress =
+    input.businessAddress ||
+    (input.cityName
+      ? [input.cityName, input.province, 'Pakistan'].filter(Boolean).join(', ')
+      : undefined);
+
   const body =
     input.role === 'vendor'
       ? {
@@ -55,19 +68,25 @@ export async function signupApi(input: {
           password: input.password,
           category: 'other',
           businessName: input.fullName,
-          businessAddress: 'Not provided',
+          businessAddress: englishAddress || 'Not provided',
           businessPhone: input.phoneNumber,
           description: 'New vendor',
-          lat: input.location?.lat,
-          lng: input.location?.lng,
+          lat: input.location.lat,
+          lng: input.location.lng,
+          cityId: input.cityId,
+          cityName: input.cityName,
+          province: input.province,
         }
       : {
           name: input.fullName,
           email: input.email,
           phone: input.phoneNumber,
           password: input.password,
-          lat: input.location?.lat,
-          lng: input.location?.lng,
+          lat: input.location.lat,
+          lng: input.location.lng,
+          cityId: input.cityId,
+          cityName: input.cityName,
+          province: input.province,
         };
 
   const response = await apiRequest<AuthResponse>(endpoint, {

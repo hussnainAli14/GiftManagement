@@ -19,6 +19,10 @@ export interface PaymentParams {
   isPayToWallet?: boolean;
   payToWalletRecipientId?: string;
   eventId?: string;
+  deliveryRecipientName?: string;
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  customerPhone?: string;
 }
 
 export type PaymentMethod = 'card' | 'google_pay' | 'apple_pay' | 'other_wallet';

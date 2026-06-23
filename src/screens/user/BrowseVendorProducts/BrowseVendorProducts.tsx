@@ -11,12 +11,16 @@ import { useRoute, useNavigation, useFocusEffect, RouteProp } from '@react-navig
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { getAllProductsApi, type ProductModel } from '../../../api/productApi';
+import { getWishlistByEventApi } from '../../../api/wishlistApi';
+import { getNonWishlistByEventApi } from '../../../api/nonWishlistApi';
+import { filterUnaddedCatalogProducts } from '../../../utils/filterAddedCatalogProducts';
 import { colors } from '../../../theme';
 import { getProductVendorName, resolveProductImageUri } from '../../../utils/resolveProductImage';
 import { styles } from './styles';
 
 export type BrowseVendorProductsParams = {
   eventId: string;
+  listType?: 'wishlist' | 'nonWishlist';
 };
 
 type StackParamList = {
@@ -24,6 +28,7 @@ type StackParamList = {
   VendorProductDetail: {
     product: ProductModel;
     eventId: string;
+    listType?: 'wishlist' | 'nonWishlist';
   };
 };
 
@@ -44,6 +49,7 @@ const BrowseVendorProducts = () => {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NativeStackNavigationProp<StackParamList, 'BrowseVendorProducts'>>();
   const eventId = route.params?.eventId ?? '';
+  const listType = route.params?.listType;
 
   const [products, setProducts] = useState<ProductModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,15 +59,26 @@ const BrowseVendorProducts = () => {
     setError('');
     setLoading(true);
     try {
-      const list = await getAllProductsApi();
-      setProducts(list.filter(isFromApprovedVendor));
+      const [list, wishlist, nonWishlist] = await Promise.all([
+        getAllProductsApi(),
+        eventId ? getWishlistByEventApi(eventId).catch(() => null) : Promise.resolve(null),
+        eventId ? getNonWishlistByEventApi(eventId).catch(() => null) : Promise.resolve(null),
+      ]);
+
+      const approved = list.filter(isFromApprovedVendor);
+      const available = filterUnaddedCatalogProducts(
+        approved,
+        wishlist?.items ?? [],
+        nonWishlist?.items ?? [],
+      );
+      setProducts(available);
     } catch (e) {
       setProducts([]);
       setError(e instanceof Error ? e.message : 'Could not load products');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [eventId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -71,7 +88,7 @@ const BrowseVendorProducts = () => {
 
   const handlePress = (product: ProductModel) => {
     if (!eventId) return;
-    navigation.navigate('VendorProductDetail', { product, eventId });
+    navigation.navigate('VendorProductDetail', { product, eventId, listType });
   };
 
   const renderItem = ({ item }: { item: ProductModel }) => {
@@ -131,7 +148,7 @@ const BrowseVendorProducts = () => {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <Text style={styles.hint}>
-            {error || 'No vendor products available yet. Check back later.'}
+            {error || 'No more products to add. Every catalog item is already on your wishlist or non-wishlist.'}
           </Text>
         }
       />

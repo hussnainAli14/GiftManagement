@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Dropdown as RNDropdown } from 'react-native-element-dropdown';
 import { DropdownProps } from './types';
@@ -33,14 +33,26 @@ const Dropdown: React.FC<DropdownProps> = ({
   paddingHorizontal,
   fullWidth = true,
   maxHeight = 300,
+  mode = 'modal',
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  const styles = getDropdownStyles(
-    disabled,
-    error,
-    isFocused,
-    {
+  const styles = useMemo(
+    () =>
+      getDropdownStyles(disabled, error, false, {
+        borderColor,
+        focusedBorderColor,
+        errorBorderColor,
+        backgroundColor,
+        textColor,
+        placeholderTextColor,
+        borderRadius,
+        borderWidth,
+        paddingVertical,
+        paddingHorizontal,
+        fullWidth,
+      }),
+    [
+      disabled,
+      error,
       borderColor,
       focusedBorderColor,
       errorBorderColor,
@@ -52,34 +64,34 @@ const Dropdown: React.FC<DropdownProps> = ({
       paddingVertical,
       paddingHorizontal,
       fullWidth,
-    }
+    ],
   );
 
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
+  const listContainerStyle = useMemo(
+    () => ({
+      borderRadius: borderRadius ?? 8,
+      borderColor: error ? errorBorderColor || colors.primary : colors.gray,
+      borderWidth: borderWidth ?? 1,
+      elevation: 8,
+      zIndex: 9999,
+    }),
+    [borderRadius, borderWidth, error, errorBorderColor],
+  );
 
   const handleChange = (item: { label: string; value: string | number }) => {
     onChange(item.value);
-    setIsFocused(false);
   };
 
+  const selectedValue = value === null || value === undefined || value === '' ? null : value;
+
   return (
-    <View style={[styles.container, containerStyle]}>
-      {label && (
-        <Text style={[
-          styles.label,
-          { color: '#000000', fontWeight: '700' },
-          labelStyle,
-        ]}>
+    <View style={[styles.container, { zIndex: mode === 'default' ? 10 : 0 }, containerStyle]}>
+      {label ? (
+        <Text style={[styles.label, { color: '#000000', fontWeight: '700' }, labelStyle]}>
           {label}
         </Text>
-      )}
-      
+      ) : null}
+
       <RNDropdown
         style={[styles.dropdownContainer, dropdownStyle]}
         placeholderStyle={[styles.placeholder, placeholderStyle]}
@@ -93,25 +105,20 @@ const Dropdown: React.FC<DropdownProps> = ({
         labelField="label"
         valueField="value"
         placeholder={placeholder}
-        value={value}
+        value={selectedValue}
         onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
         disable={disabled}
         search={searchable}
         searchPlaceholder={searchPlaceholder}
+        mode={mode}
         activeColor={colors.primary}
-        containerStyle={{
-          borderRadius: borderRadius ?? 8,
-          borderColor: error ? (errorBorderColor || colors.primary) : colors.gray,
-          borderWidth: borderWidth ?? 1,
-        }}
+        containerStyle={listContainerStyle}
         itemTextStyle={{
           ...styles.selectedText,
           color: textColor || '#000000',
         }}
-        renderItem={(item: any) => {
-          const isSelected = item.value === value;
+        renderItem={(item: { label: string; value: string | number }) => {
+          const isSelected = item.value === selectedValue;
           return (
             <View
               style={{
@@ -122,7 +129,7 @@ const Dropdown: React.FC<DropdownProps> = ({
               <Text
                 style={{
                   ...styles.selectedText,
-                  color: isSelected ? colors.white : (textColor || '#000000'),
+                  color: isSelected ? colors.white : textColor || '#000000',
                 }}
               >
                 {item.label}
@@ -132,12 +139,8 @@ const Dropdown: React.FC<DropdownProps> = ({
         }}
         iconColor={colors.darkPurple}
       />
-      
-      {error && (
-        <Text style={[styles.error, errorStyle]}>
-          {error}
-        </Text>
-      )}
+
+      {error ? <Text style={[styles.error, errorStyle]}>{error}</Text> : null}
     </View>
   );
 };

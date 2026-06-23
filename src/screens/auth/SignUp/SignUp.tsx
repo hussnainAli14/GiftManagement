@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Button, TextInput } from '../../../components';
+import PakistanCityField from './PakistanCityField';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { RouteProp } from '@react-navigation/native';
 import { signupApi } from '../../../api/authApi';
-import { getDeviceLocationForSignup } from '../../../utils/getDeviceLocation';
+import {
+  getCoordinatesForCityId,
+  getEnglishAddressForCityId,
+  getPakistanCityById,
+} from '../../../data/pakistanCities';
 import type { AuthStackParamList, SignUpScreenNavigationProp, SignUpFormData } from '../Welcome/types';
 
 const SignUp = () => {
@@ -24,26 +29,58 @@ const SignUp = () => {
   const {
     control,
     handleSubmit,
-    formState: { errors, isValid },
-    watch,
+    formState: { errors },
+    trigger,
   } = useForm<SignUpFormData>({
-    mode: 'onChange', // Enable real-time validation
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       fullName: '',
       email: '',
       phoneNumber: '',
+      city: '',
       password: '',
       confirmPassword: '',
     },
   });
 
-  const password = watch('password');
+  const watchedValues = useWatch({ control });
+  const formValues = watchedValues ?? {
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    city: '',
+    password: '',
+    confirmPassword: '',
+  };
+  const password = formValues.password ?? '';
+
+  useEffect(() => {
+    if (formValues.confirmPassword) {
+      void trigger('confirmPassword');
+    }
+  }, [password, formValues.confirmPassword, trigger]);
+
+  const phoneDigits = (formValues.phoneNumber ?? '').replace(/\D/g, '');
+
+  const isFormValid =
+    (formValues.fullName ?? '').trim().length >= 2 &&
+    /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test((formValues.email ?? '').trim()) &&
+    phoneDigits.length >= 10 &&
+    (formValues.city ?? '').trim().length > 0 &&
+    password.length >= 6 &&
+    (formValues.confirmPassword ?? '') === password;
 
   const onSubmit = async (data: SignUpFormData) => {
     try {
       setIsSubmitting(true);
 
-      const location = await getDeviceLocationForSignup();
+      const cityId = String(data.city || '');
+      const city = getPakistanCityById(cityId);
+      const location = getCoordinatesForCityId(cityId);
+      if (!location || !city) {
+        throw new Error('Please select your city.');
+      }
 
       const result = await signupApi({
         role,
@@ -52,6 +89,10 @@ const SignUp = () => {
         phoneNumber: data.phoneNumber.trim(),
         password: data.password,
         location,
+        cityId,
+        cityName: city.name,
+        province: city.province,
+        businessAddress: getEnglishAddressForCityId(cityId),
       });
       navigation.navigate('Verify', { email: result.email, role });
     } catch (error) {
@@ -68,7 +109,6 @@ const SignUp = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Full Name Input */}
         <Controller
           control={control}
           name="fullName"
@@ -94,7 +134,6 @@ const SignUp = () => {
           )}
         />
 
-        {/* Email Input */}
         <Controller
           control={control}
           name="email"
@@ -121,25 +160,18 @@ const SignUp = () => {
           )}
         />
 
-        {/* Phone Number Input */}
         <Controller
           control={control}
           name="phoneNumber"
           rules={{
             required: 'Phone number is required',
-            pattern: {
-              value: /^[\d\s\(\)\-]+$/,
-              message: 'Invalid phone number',
-            },
-            minLength: {
-              value: 10,
-              message: 'Phone number must be at least 10 digits',
-            },
+            validate: (value) =>
+              value.replace(/\D/g, '').length >= 10 || 'Phone number must be at least 10 digits',
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
               label="Phone Number"
-              placeholder="(123) 456-7890"
+              placeholder="0300 1234567"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -151,7 +183,23 @@ const SignUp = () => {
           )}
         />
 
-        {/* Password Input */}
+        <Controller
+          control={control}
+          name="city"
+          rules={{
+            required: 'City is required',
+          }}
+          render={({ field: { onChange, onBlur, value }, fieldState }) => (
+            <PakistanCityField
+              value={value}
+              onChange={onChange}
+              onBlur={onBlur}
+              error={fieldState.isTouched ? errors.city?.message : undefined}
+              containerStyle={styles.inputContainer}
+            />
+          )}
+        />
+
         <Controller
           control={control}
           name="password"
@@ -185,14 +233,13 @@ const SignUp = () => {
           )}
         />
 
-        {/* Confirm Password Input */}
         <Controller
           control={control}
           name="confirmPassword"
           rules={{
             required: 'Please confirm your password',
-            validate: (value) =>
-              value === password || 'Passwords do not match',
+            validate: (value, values) =>
+              value === values.password || 'Passwords do not match',
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
@@ -218,21 +265,20 @@ const SignUp = () => {
         />
 
         <View style={styles.locationNotice}>
-          <Icon name="location-on" size={20} color={colors.primary} />
+          <Icon name="location-city" size={20} color={colors.primary} />
           <Text style={styles.locationNoticeText}>
             {role === 'vendor'
-              ? 'We will ask for your location when you continue so customers can find your business nearby.'
-              : 'We will ask for your location when you continue so friends can gift you from nearby vendors.'}
+              ? 'Select your business city so customers can find you in Pakistan.'
+              : 'Select your city so friends can gift you from nearby vendors in Pakistan.'}
           </Text>
         </View>
 
-        {/* Continue Button */}
         <View style={styles.buttonContainer}>
           <Button
             variant="primary"
             fullWidth
             onPress={handleSubmit(onSubmit)}
-            disabled={!isValid || isSubmitting}
+            disabled={!isFormValid || isSubmitting}
             style={styles.continueButton}
           >
             {isSubmitting ? 'Creating Account...' : 'Continue'}

@@ -8,6 +8,7 @@ import { getMyVendorProfileApi, type VendorModel } from '../../../api/vendorApi'
 import { useAuth } from '../../../context/AuthContext';
 import { colors } from '../../../theme';
 import { styles } from './styles';
+import { formatEnglishBusinessAddress } from '../../../utils/formatEnglishBusinessAddress';
 import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
 
 type VendorProfileStackParamList = {
@@ -49,6 +50,10 @@ export const VendorProfile = () => {
   }, []);
 
   const title = useMemo(() => user?.name || vendor?.name || 'Vendor', [user?.name, vendor?.name]);
+  const businessAddress = useMemo(
+    () => formatEnglishBusinessAddress(vendor ?? {}) ?? vendor?.businessAddress,
+    [vendor],
+  );
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -119,7 +124,7 @@ export const VendorProfile = () => {
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Business address</Text>
-                <Text style={styles.value}>{labelOrDash(vendor?.businessAddress)}</Text>
+                <Text style={styles.value}>{labelOrDash(businessAddress)}</Text>
               </View>
             </View>
 

@@ -17,11 +17,10 @@ export function filterAvailableWishlistItems(items: WishlistItemModel[]): Wishli
   return items.filter(isWishlistItemAvailable);
 }
 
-/** Owners see fulfilled items; everyone else only sees items still available to gift/contribute. */
+/** Hide gifted or fully funded items for every viewer, including the owner. */
 export function filterWishlistItemsForViewer(
   items: WishlistItemModel[],
-  isOwner: boolean
+  _isOwner?: boolean,
 ): WishlistItemModel[] {
-  if (isOwner) return items;
   return filterAvailableWishlistItems(items);
 }

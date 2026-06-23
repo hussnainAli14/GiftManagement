@@ -53,6 +53,10 @@ const Payment = () => {
   const isPayToWallet = params?.isPayToWallet === true;
   const payToWalletRecipientId = params?.payToWalletRecipientId;
   const eventId = params?.eventId;
+  const deliveryRecipientName = params?.deliveryRecipientName;
+  const deliveryAddress = params?.deliveryAddress;
+  const deliveryCity = params?.deliveryCity;
+  const customerPhone = params?.customerPhone;
 
   const isWalletPayToUser =
     isPayToWallet ||
@@ -156,6 +160,10 @@ const Payment = () => {
             vendorId,
             totalAmount: amountDue,
             giftMessage: description,
+            deliveryRecipientName,
+            deliveryAddress,
+            deliveryCity,
+            customerPhone,
           });
         } else if (isContribution) {
           await createWishlistContributionOrderApi({

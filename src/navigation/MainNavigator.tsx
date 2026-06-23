@@ -102,9 +102,21 @@ const EventsStack = () => {
       <Stack.Screen
         name="CreateEventStep1"
         component={CreateEventStep1}
+        options={({ navigation, route }) => ({
+          headerShown: true,
+          headerTitle: (route.params as { eventId?: string } | undefined)?.eventId
+            ? 'Edit Event'
+            : 'Create Event (1/2)',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
+        })}
+      />
+      <Stack.Screen
+        name="EditEvent"
+        component={CreateEventStep1}
         options={({ navigation }) => ({
           headerShown: true,
-          headerTitle: 'Create Event (1/2)',
+          headerTitle: 'Edit Event',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
         })}
@@ -127,19 +139,6 @@ const EventsStack = () => {
           headerTitle: (route.params as { wishlistName?: string })?.wishlistName ?? 'Birthday Wishlist',
           ...getDefaultHeaderOptions(),
           headerLeft: getHeaderBackButton(navigation),
-          headerRight: () => {
-            const eventId = (route.params as { eventId?: string })?.eventId;
-            if (!eventId) return null;
-            return (
-              <TouchableOpacity
-                onPress={() => navigation.navigate('BrowseVendorProducts', { eventId })}
-                style={{ marginRight: 16 }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Icon name="add" size={24} color="#000000" />
-              </TouchableOpacity>
-            );
-          },
         })}
       />
       <Stack.Screen
@@ -469,6 +468,17 @@ const HomeStack = () => {
               <Icon name="share" size={24} color="#000000" />
             </TouchableOpacity>
           ),
+          tabBarStyle: { display: 'none' },
+        })}
+      />
+      <Stack.Screen
+        name="EditEvent"
+        component={CreateEventStep1}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: 'Edit Event',
+          ...getDefaultHeaderOptions(),
+          headerLeft: getHeaderBackButton(navigation),
           tabBarStyle: { display: 'none' },
         })}
       />

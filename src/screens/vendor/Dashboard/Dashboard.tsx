@@ -23,6 +23,7 @@ type DashboardStackParamList = {
   DashboardMain: undefined;
   AddProduct: undefined;
   MyProducts: undefined;
+  Allusers: undefined;
 };
 
 function formatCurrency(amount: number): string {
@@ -128,14 +129,57 @@ const Dashboard = () => {
           <Icon name="inventory-2" size={22} color={colors.white} style={styles.buttonIcon} />
           <Text style={styles.actionButtonText}>View All Products</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.actionButton, styles.actionButtonInner]}
           onPress={() => navigation.navigate('Orders')}
           activeOpacity={0.8}
         >
           <Icon name="list-alt" size={22} color={colors.white} style={styles.buttonIcon} />
           <Text style={styles.actionButtonText}>View All Orders</Text>
+        </TouchableOpacity> */}
+
+          <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonInner]}
+          onPress={() =>
+            navigation.navigate('Orders', {
+              screen: 'OrdersMain',
+              params: { sortBy: 'city' },
+            })
+          }
+          activeOpacity={0.8}
+        >
+          <Icon name="location-city" size={22} color={colors.white} style={styles.buttonIcon} />
+          <Text style={styles.actionButtonText}> Orders By City Name</Text>
         </TouchableOpacity>
+
+         <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonInner]}
+          onPress={() =>
+            navigation.navigate('Orders', {
+              screen: 'OrdersMain',
+              params: { sortBy: 'amount' },
+            })
+          }
+          activeOpacity={0.8}
+        >
+          <Icon name="payments" size={22} color={colors.white} style={styles.buttonIcon} />
+          <Text style={styles.actionButtonText}> Max Orders By Amount </Text>
+        </TouchableOpacity>
+
+         <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonInner]}
+          onPress={() =>
+            navigation.navigate('Orders', {
+              screen: 'OrdersMain',
+              params: { sortBy: 'customerCount' },
+            })
+          }
+          activeOpacity={0.8}
+        >
+          <Icon name="groups" size={22} color={colors.white} style={styles.buttonIcon} />
+          <Text style={styles.actionButtonText}> Maximum Number Of Orders </Text>
+        </TouchableOpacity>
+      
       </ScrollView>
     </View>
   );

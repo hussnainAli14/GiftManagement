@@ -32,7 +32,7 @@ type PersonsWishlistStackParamList = {
     wishlistOwnerId?: string;
     eventOwnerId?: string;
   };
-  BrowseVendorProducts: { eventId: string };
+  BrowseVendorProducts: { eventId: string; listType?: 'wishlist' | 'nonWishlist' };
   VendorProductDetail: { product: ProductModel; eventId: string };
   EditItem: { item: any; listType?: 'wishlist' | 'nonWishlist' };
 };
@@ -188,7 +188,10 @@ const PersonsWishlist = () => {
           {isOwner && resolvedEventId ? (
             <TouchableOpacity
               onPress={() => {
-                navigation.navigate('BrowseVendorProducts', { eventId: resolvedEventId });
+                navigation.navigate('BrowseVendorProducts', {
+                  eventId: resolvedEventId,
+                  listType: activeTab,
+                });
               }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
@@ -198,7 +201,7 @@ const PersonsWishlist = () => {
         </View>
       ),
     });
-  }, [navigation, isOwner, resolvedEventId]);
+  }, [navigation, isOwner, resolvedEventId, activeTab]);
 
   const handleItemPress = (item: PersonsWishlistItemData) => {
     if (activeTab === 'wishlist') {

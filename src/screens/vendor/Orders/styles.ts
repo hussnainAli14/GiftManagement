@@ -10,6 +10,13 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  citySortHint: {
+    ...typography.textStyles.caption,
+    color: colors.textSecondary,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -76,6 +83,11 @@ export const styles = StyleSheet.create({
     color: colors.black,
     marginBottom: 2,
   },
+  orderCity: {
+    ...typography.textStyles.caption,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
   orderTotal: {
     ...typography.textStyles.label,
     color: ORDER_TOTAL_BLUE,
@@ -104,10 +116,35 @@ export const styles = StyleSheet.create({
   chevron: {
     marginLeft: 4,
   },
+  customerAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.lightGray,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerCountBadge: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: ORDER_TOTAL_BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    marginLeft: 8,
+  },
+  customerCountBadgeText: {
+    ...typography.textStyles.label,
+    color: colors.white,
+    fontWeight: '700',
+  },
 });
 
 export const ORDER_TOTAL_COLOR = ORDER_TOTAL_BLUE;
 export const BADGE_COLORS = {
   outForDelivery: BADGE_OUT_FOR_DELIVERY,
   pending: BADGE_PENDING,
+  completed: '#22C55E',
 };

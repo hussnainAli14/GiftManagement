@@ -28,6 +28,77 @@ type ProductResponse = {
   data?: ProductModel | ProductModel[];
 };
 
+export type UserModel = {
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+
+  phone: String,
+  avatar: String,
+
+  location: {
+    lat: Number,
+    lng: Number
+  },
+  city: String,
+  area: String,
+  country: String,
+
+  // User Address
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: String
+  },
+
+  resetPasswordToken: String, // added for forgot-password
+  resetPasswordExpire: Date,   // added for forgot-password
+
+  emailVerificationCode: String, // 6-digit verification code
+  emailVerificationExpire: Date, // code expiration time
+  emailVerified: { type: Boolean, default: false }, // email verification status
+
+  // User Preferences
+  birthdate: Date,
+  gender: String,
+  interests: [String],
+  preferencesCompleted: { type: Boolean, default: false },
+
+  // RBAC Fields
+  role: {
+    type: String,
+    enum: ['USER', 'VENDOR', 'ADMIN'],
+    default: 'USER'
+  },
+  isApproved: { type: Boolean, default: false }, // For vendors
+
+  // Temporary vendor data storage (before approval)
+  vendorData: {
+    businessName: String,
+    businessAddress: String,
+    businessPhone: String,
+    category: String,
+    description: String
+  },
+
+  walletCoins: {
+    type: Number,
+    default: 0
+  },
+
+  // Notifications (push + in-app)
+  notificationsEnabled: { type: Boolean, default: true },
+  /** FCM/APNs tokens for this user (multiple devices). */
+  deviceTokens: { type: [String], default: [] },
+
+  lastPasswordChangedAt: Date,
+  lastProfileUpdatedAt: Date,
+
+  createdAt: { type: Date }
+};
+
 export async function createProductApi(vendorId: string, input: {
   name: string;
   description?: string;

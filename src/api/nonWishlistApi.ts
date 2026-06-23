@@ -7,6 +7,7 @@ export type NonWishlistItemModel = {
   price?: number;
   image?: string;
   category?: string;
+  productId?: string | { _id?: string };
 };
 
 export type NonWishlistModel = {
@@ -32,6 +33,7 @@ export async function addNonWishlistItemApi(input: {
   price: number;
   category?: string;
   image?: string;
+  productId?: string;
 }): Promise<NonWishlistModel> {
   const response = await apiRequest<NonWishlistResponse>('/non-wishlists/add-item', {
     method: 'POST',
@@ -43,6 +45,7 @@ export async function addNonWishlistItemApi(input: {
         price: input.price,
         category: input.category,
         image: input.image,
+        productId: input.productId,
       },
     },
   });

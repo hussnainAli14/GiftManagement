@@ -7,7 +7,7 @@ export interface EventListItemData {
   title: string;
   date: string;
   status: EventStatus;
-  // Add more fields as needed when integrating with real API
+  isOwnEvent?: boolean;
 }
 
 export interface EventListItemProps {

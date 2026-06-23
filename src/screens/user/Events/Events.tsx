@@ -1,30 +1,36 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { EventListItem } from '../../../components';
 import type { EventListItemData, EventStatus } from '../../../components/EventListItem';
 import { getEventsFeedApi, type EventModel } from '../../../api/eventApi';
+import { useAuth } from '../../../context/AuthContext';
 import { isEventPast } from '../../../utils/eventDate';
+import { getEventCreatorId } from '../../../utils/getEventCreatorId';
+import { showOwnEventActions } from '../../../utils/ownEventActions';
 import { styles } from './styles';
 
 type EventsStackParamList = {
   EventsMain: undefined;
   PersonsWishlist: { eventTitle?: string; eventId?: string };
+  EditEvent: { eventId: string };
 };
 
 type EventsScreenNavigationProp = NativeStackNavigationProp<EventsStackParamList, 'EventsMain'>;
 
-function toListItem(event: EventModel): EventListItemData {
+function toListItem(event: EventModel, viewerId?: string): EventListItemData {
   const eventDate = new Date(event.date);
   const past = isEventPast(event.date);
   const status: EventStatus =
     eventDate.toString() === 'Invalid Date' ? 'draft' : past ? 'past' : 'upcoming';
+  const creatorId = getEventCreatorId(event);
   return {
     id: event._id,
     title: event.name,
     date: status === 'draft' ? 'TBD' : eventDate.toLocaleDateString(),
     status,
+    isOwnEvent: !!viewerId && !!creatorId && creatorId === viewerId,
   };
 }
 
@@ -34,18 +40,22 @@ const Events = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterTab>('upcoming');
   const [allEvents, setAllEvents] = useState<EventListItemData[]>([]);
   const navigation = useNavigation<EventsScreenNavigationProp>();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const events = await getEventsFeedApi();
-        setAllEvents(events.map(toListItem));
-      } catch {
-        setAllEvents([]);
-      }
-    };
-    load();
-  }, []);
+  const loadEvents = useCallback(async () => {
+    try {
+      const events = await getEventsFeedApi();
+      setAllEvents(events.map((event) => toListItem(event, user?.id)));
+    } catch {
+      setAllEvents([]);
+    }
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents]),
+  );
 
   const counts = useMemo(() => {
     return {
@@ -61,6 +71,24 @@ const Events = () => {
   );
 
   const handleEventPress = (event: EventListItemData) => {
+    if (event.isOwnEvent) {
+      showOwnEventActions({
+        eventName: event.title,
+        eventId: event.id,
+        onViewWishlist: () => {
+          navigation.navigate('PersonsWishlist', { eventTitle: event.title, eventId: event.id });
+        },
+        onEdit: () => {
+          navigation.navigate('EditEvent', { eventId: event.id });
+        },
+        onDeleted: () => {
+          setAllEvents((prev) => prev.filter((item) => item.id !== event.id));
+          Alert.alert('Event deleted', `"${event.title}" was removed.`);
+        },
+      });
+      return;
+    }
+
     navigation.navigate('PersonsWishlist', { eventTitle: event.title, eventId: event.id });
   };
 

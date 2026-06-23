@@ -1,123 +1,119 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Search } from '../../../components';
 import { colors } from '../../../theme';
 import { styles, BADGE_COLORS } from './styles';
-import { getMyVendorOrdersApi, type BackendOrder } from '../../../api/orderApi';
-import { API_ORIGIN } from '../../../api/config';
+import { getApprovedOrdersByCityApi, getMyVendorOrdersApi, type BackendOrder } from '../../../api/orderApi';
+import { compareCitiesAsc } from './orderCity';
+import { aggregateApprovedOrdersByCustomer, type VendorCustomerOrderCount } from './customerOrderCounts';
+import { mapOrderToListItem, type OrderStatus, type VendorOrderListItem } from './orderDetailMapper';
+
+export type { OrderStatus };
+export type VendorOrderItem = VendorOrderListItem;
+
+export type VendorOrdersSortBy = 'city' | 'amount' | 'customerCount';
 
 type OrdersStackParamList = {
-  OrdersMain: undefined;
-  OrderDetails: { order: VendorOrderItem };
+  OrdersMain: { sortBy?: VendorOrdersSortBy } | undefined;
+  OrderDetails: { order: VendorOrderItem; backendOrder: BackendOrder };
 };
 
-export type OrderStatus = 'Delivered' | 'Out for Delivery' | 'Processing' | 'Pending';
-
-export type VendorOrderItem = {
-  id: string;
-  orderId: string;
-  customerName: string;
-  total: string;
-  status: OrderStatus;
-  imageUri?: string | number;
-};
-
-function resolveImageUri(raw: unknown): string | undefined {
-  const s = String(raw || '').trim();
-  if (!s) return undefined;
-  if (s.startsWith('/')) return `${API_ORIGIN}${s}`;
-  return s;
-}
-
-function formatPKR(amount: number | undefined): string {
-  const n = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
-  return `Rs ${n.toFixed(2)}`;
-}
-
-function toUiStatus(status: BackendOrder['status']): OrderStatus {
-  const s = String(status || '').toLowerCase();
-  if (s === 'delivered') return 'Delivered';
-  if (s === 'pending') return 'Pending';
-  if (s === 'completed') return 'Processing';
-  if (s === 'cancelled') return 'Processing';
-  return 'Processing';
-}
-
-function shortOrderId(id: string): string {
-  const s = String(id || '');
-  return s.length > 6 ? s.slice(-6).toUpperCase() : s.toUpperCase();
-}
-
-function mapOrderToItem(o: BackendOrder): VendorOrderItem {
-  const id = String(o._id || '');
-  const customerName =
-    typeof o.userId === 'object' && o.userId && 'name' in o.userId
-      ? String(o.userId.name || 'Customer')
-      : 'Customer';
-
-  const firstProduct =
-    o.items?.find((it) => it && typeof it.productId === 'object' && it.productId)?.productId as
-      | { image?: string; images?: string[] }
-      | undefined;
-  const img = firstProduct?.images?.[0] || firstProduct?.image;
-
-  return {
-    id,
-    orderId: shortOrderId(id),
-    customerName,
-    total: formatPKR(o.totalAmount),
-    status: toUiStatus(o.status),
-    imageUri: resolveImageUri(img),
-  };
-}
+type OrdersMainRouteProp = RouteProp<OrdersStackParamList, 'OrdersMain'>;
 
 const Orders = () => {
   const insets = useSafeAreaInsets();
+  const route = useRoute<OrdersMainRouteProp>();
   const navigation = useNavigation<NativeStackNavigationProp<OrdersStackParamList, 'OrdersMain'>>();
+  const sortBy = route.params?.sortBy;
   const [searchQuery, setSearchQuery] = useState('');
-  const [orders, setOrders] = useState<VendorOrderItem[]>([]);
+  const [orders, setOrders] = useState<VendorOrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const raw = await getMyVendorOrdersApi();
-        const mapped = raw.map(mapOrderToItem);
-        if (!cancelled) setOrders(mapped);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load orders.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const loadOrders = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const usesAllVendorsFeed =
+        sortBy === 'city' || sortBy === 'amount' || sortBy === 'customerCount';
+      const raw = usesAllVendorsFeed
+        ? await getApprovedOrdersByCityApi()
+        : await getMyVendorOrdersApi();
+      setOrders(raw.map(mapOrderToListItem));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load orders.');
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [sortBy]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadOrders();
+    }, [loadOrders])
+  );
 
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) => {
-      return (
-        o.orderId.toLowerCase().includes(q) ||
-        o.customerName.toLowerCase().includes(q) ||
-        o.status.toLowerCase().includes(q)
-      );
-    });
-  }, [orders, searchQuery]);
+    let list = sortBy === 'city' || sortBy === 'amount'
+      ? orders.filter((o) => o.status === 'Order Approved')
+      : orders;
+
+    list = !q
+      ? list
+      : list.filter((o) => {
+          return (
+            o.orderId.toLowerCase().includes(q) ||
+            o.customerName.toLowerCase().includes(q) ||
+            o.city.toLowerCase().includes(q) ||
+            o.status.toLowerCase().includes(q)
+          );
+        });
+
+    if (sortBy === 'city') {
+      list = [...list].sort((a, b) => {
+        const byCity = compareCitiesAsc(a.city, b.city);
+        if (byCity !== 0) return byCity;
+        return a.orderId.localeCompare(b.orderId, undefined, { sensitivity: 'base' });
+      });
+    } else if (sortBy === 'amount') {
+      list = [...list].sort((a, b) => {
+        const byAmount = b.totalAmount - a.totalAmount;
+        if (byAmount !== 0) return byAmount;
+        return a.orderId.localeCompare(b.orderId, undefined, { sensitivity: 'base' });
+      });
+    }
+
+    return list;
+  }, [orders, searchQuery, sortBy]);
+
+  const customerOrderCounts = useMemo(() => {
+    if (sortBy !== 'customerCount') return [];
+    const aggregated = aggregateApprovedOrdersByCustomer(orders);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return aggregated;
+    return aggregated.filter((item) => item.customerName.toLowerCase().includes(q));
+  }, [orders, searchQuery, sortBy]);
+
+  const isCustomerCountView = sortBy === 'customerCount';
 
   const renderStatus = (status: OrderStatus) => {
-    const isBadge = status === 'Out for Delivery' || status === 'Pending';
-    const badgeBg = status === 'Out for Delivery' ? BADGE_COLORS.outForDelivery : BADGE_COLORS.pending;
+    const isBadge =
+      status === 'Placed' || status === 'Completed' || status === 'Order Approved';
+    const badgeBg =
+      status === 'Placed'
+        ? BADGE_COLORS.pending
+        : status === 'Order Approved'
+          ? '#22C55E'
+          : status === 'Completed'
+            ? BADGE_COLORS.completed
+            : BADGE_COLORS.pending;
     if (isBadge) {
       return (
         <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
@@ -128,15 +124,37 @@ const Orders = () => {
     return <Text style={styles.statusPlain}>{status}</Text>;
   };
 
-  const renderOrderCard = ({ item }: { item: VendorOrderItem }) => (
+  const renderCustomerCard = ({ item }: { item: VendorCustomerOrderCount }) => (
+    <View style={styles.orderCard}>
+      <View style={styles.customerAvatar}>
+        <Icon name="person" size={28} color={colors.darkGray} />
+      </View>
+      <View style={styles.orderDetails}>
+        <Text style={styles.customerName} numberOfLines={1}>{item.customerName}</Text>
+        <Text style={styles.orderTotal}>
+          {item.orderCount} {item.orderCount === 1 ? 'order' : 'orders'}
+        </Text>
+      </View>
+      <View style={styles.customerCountBadge}>
+        <Text style={styles.customerCountBadgeText}>{item.orderCount}</Text>
+      </View>
+    </View>
+  );
+
+  const renderOrderCard = ({ item }: { item: VendorOrderListItem }) => (
     <TouchableOpacity
       style={styles.orderCard}
       activeOpacity={0.7}
-      onPress={() => navigation.navigate('OrderDetails', { order: item })}
+      onPress={() =>
+        navigation.navigate('OrderDetails', {
+          order: item,
+          backendOrder: item.backendOrder,
+        })
+      }
     >
       <View style={styles.productImage}>
         {item.imageUri ? (
-          <Image source={{ uri: item.imageUri }} style={styles.productImageFill} resizeMode="cover" />
+          <Image source={{ uri: String(item.imageUri) }} style={styles.productImageFill} resizeMode="cover" />
         ) : (
           <Icon name="inventory-2" size={28} color={colors.darkGray} style={{ alignSelf: 'center', marginTop: 14 }} />
         )}
@@ -144,6 +162,9 @@ const Orders = () => {
       <View style={styles.orderDetails}>
         <Text style={styles.orderId} numberOfLines={1}>Order #{item.orderId}</Text>
         <Text style={styles.customerName} numberOfLines={1}>{item.customerName}</Text>
+        {sortBy === 'city' ? (
+          <Text style={styles.orderCity} numberOfLines={1}>{item.city}</Text>
+        ) : null}
         <Text style={styles.orderTotal}>{item.total}</Text>
       </View>
       <View style={styles.statusRow}>
@@ -155,10 +176,31 @@ const Orders = () => {
 
   return (
     <View style={styles.container}>
+      {sortBy === 'city' ? (
+        <Text style={styles.citySortHint}>
+          Approved orders from all vendors, sorted A–Z by city
+        </Text>
+      ) : sortBy === 'amount' ? (
+        <Text style={styles.citySortHint}>
+          Approved orders from all vendors, sorted by amount, highest to lowest
+        </Text>
+      ) : sortBy === 'customerCount' ? (
+        <Text style={styles.citySortHint}>
+          Approved orders per customer across all vendors, highest to lowest
+        </Text>
+      ) : null}
       <View style={styles.searchRow}>
         <View style={styles.searchWrapper}>
           <Search
-            placeholder="Search orders..."
+            placeholder={
+              sortBy === 'city'
+                ? 'Search by city, customer, order…'
+                : sortBy === 'amount'
+                  ? 'Search by customer, order, amount…'
+                  : sortBy === 'customerCount'
+                    ? 'Search by customer name…'
+                    : 'Search orders...'
+            }
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -168,9 +210,9 @@ const Orders = () => {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={filteredOrders}
+        data={isCustomerCountView ? customerOrderCounts : filteredOrders}
         keyExtractor={(item) => item.id}
-        renderItem={renderOrderCard}
+        renderItem={isCustomerCountView ? renderCustomerCard : renderOrderCard}
         contentContainerStyle={[
           styles.listContent,
           { paddingBottom: insets.bottom + 80 },
@@ -188,7 +230,9 @@ const Orders = () => {
             </View>
           ) : (
             <View style={{ paddingTop: 24 }}>
-              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>No orders found.</Text>
+              <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>
+                {isCustomerCountView ? 'No customers found.' : 'No orders found.'}
+              </Text>
             </View>
           )
         }

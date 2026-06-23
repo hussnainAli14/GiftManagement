@@ -1,4 +1,7 @@
-import type { OrderStatus, VendorOrderItem } from '../Orders';
+import type { BackendOrder } from '../../../../api/orderApi';
+import type { OrderStatus, VendorOrderListItem } from '../orderDetailMapper';
+
+export type VendorOrderItem = VendorOrderListItem;
 
 export type OrderDetailItem = {
   id: string;
@@ -24,5 +27,5 @@ export type VendorOrderDetail = {
 
 export type OrderDetailsScreenParams = {
   order: VendorOrderItem;
-  detail?: VendorOrderDetail;
+  backendOrder: BackendOrder;
 };

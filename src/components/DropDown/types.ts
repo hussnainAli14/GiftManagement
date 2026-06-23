@@ -161,4 +161,10 @@ export interface DropdownProps {
    * @default 300
    */
   maxHeight?: number;
+
+  /**
+   * Render list in a modal overlay (recommended inside ScrollView forms).
+   * @default 'modal'
+   */
+  mode?: 'default' | 'modal' | 'auto';
 }

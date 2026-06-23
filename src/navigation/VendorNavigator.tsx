@@ -152,9 +152,16 @@ const OrdersStack = () => (
     <Stack.Screen
       name="OrdersMain"
       component={Orders}
-      options={({ navigation }) => ({
+      options={({ navigation, route }) => ({
         headerShown: true,
-        headerTitle: 'Vendor Orders',
+        headerTitle:
+          route.params?.sortBy === 'city'
+            ? 'Orders By City Name'
+            : route.params?.sortBy === 'amount'
+              ? 'Max Orders By Amount'
+              : route.params?.sortBy === 'customerCount'
+                ? 'Maximum Number Of Orders'
+                : 'Vendor Orders',
         ...getDefaultHeaderOptions(),
         headerLeft: getHeaderBackButton(navigation),
         headerRight: () => (
@@ -223,6 +230,14 @@ const VendorNavigator = () => {
       <Tab.Screen
         name="Orders"
         component={OrdersStack}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.navigate('Orders', {
+              screen: 'OrdersMain',
+              params: {},
+            });
+          },
+        })}
         options={{
           tabBarLabel: 'Orders',
           tabBarIcon: renderOrdersIcon,

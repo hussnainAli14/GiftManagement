@@ -43,6 +43,7 @@ export type SignUpFormData = {
   fullName: string;
   email: string;
   phoneNumber: string;
+  city: string;
   password: string;
   confirmPassword: string;
 };

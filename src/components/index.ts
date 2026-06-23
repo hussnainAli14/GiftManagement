@@ -21,6 +21,7 @@ export * from './MultiStepInput';
 export * from './Tag';
 export * from './TagsList';
 export * from './DropDown';
+export * from './CityPicker';
 export * from './RadioButton';
 export * from './DatePicker';
 export * from './Tabs';

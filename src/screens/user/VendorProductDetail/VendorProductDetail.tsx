@@ -14,6 +14,7 @@ import { styles } from './styles';
 export type VendorProductDetailParams = {
   product: ProductModel;
   eventId: string;
+  listType?: 'wishlist' | 'nonWishlist';
 };
 
 type StackParamList = {
@@ -30,8 +31,9 @@ function formatPkr(price: number | undefined): string {
 const VendorProductDetail = () => {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NativeStackNavigationProp<StackParamList, 'VendorProductDetail'>>();
-  const { product, eventId } = route.params ?? {};
+  const { product, eventId, listType } = route.params ?? {};
   const [adding, setAdding] = useState<'wishlist' | 'nonWishlist' | null>(null);
+  const targetListType = listType ?? 'wishlist';
 
   const imageUri = useMemo(
     () => (product ? resolveProductImageUri(product) : undefined),
@@ -53,6 +55,7 @@ const VendorProductDetail = () => {
         price: Number(product.price) || 0,
         category: product.category,
         image: imageUri,
+        productId: product._id,
       };
 
       if (listType === 'nonWishlist') {
@@ -100,24 +103,30 @@ const VendorProductDetail = () => {
             <Text style={styles.description}>{product.description.trim()}</Text>
           ) : null}
 
-          <Text style={styles.sectionLabel}>Add to your event</Text>
+          <Text style={styles.sectionLabel}>
+            {targetListType === 'nonWishlist' ? 'Add to non-wishlist' : 'Add to your event'}
+          </Text>
           <View style={styles.actions}>
-            <Button
-              variant="primary"
-              fullWidth
-              onPress={() => addToList('wishlist')}
-              disabled={adding != null}
-            >
-              {adding === 'wishlist' ? 'Adding…' : 'Add to Wishlist'}
-            </Button>
-            <Button
-              variant="secondary"
-              fullWidth
-              onPress={() => addToList('nonWishlist')}
-              disabled={adding != null}
-            >
-              {adding === 'nonWishlist' ? 'Adding…' : 'Add to Non Wishlist'}
-            </Button>
+            {(listType == null || listType === 'wishlist') ? (
+              <Button
+                variant="primary"
+                fullWidth
+                onPress={() => addToList('wishlist')}
+                disabled={adding != null}
+              >
+                {adding === 'wishlist' ? 'Adding…' : 'Add to Wishlist'}
+              </Button>
+            ) : null}
+            {(listType == null || listType === 'nonWishlist') ? (
+              <Button
+                variant={listType === 'nonWishlist' ? 'primary' : 'secondary'}
+                fullWidth
+                onPress={() => addToList('nonWishlist')}
+                disabled={adding != null}
+              >
+                {adding === 'nonWishlist' ? 'Adding…' : 'Add to Non Wishlist'}
+              </Button>
+            ) : null}
           </View>
         </View>
       </ScrollView>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import { useNotificationBadge } from '../../../context/NotificationBadgeContext'
 import { colors } from '../../../theme';
 import type { ChatThreadParams } from '../../../navigation/messagingParams';
 import { sortEventsByUpcoming } from '../../../utils/sortEventsByUpcoming';
+import { showOwnEventActions } from '../../../utils/ownEventActions';
 import { styles } from './styles';
 
 type HomeStackParamList = {
@@ -20,6 +21,7 @@ type HomeStackParamList = {
   MessagesInbox: undefined;
   ChatThread: ChatThreadParams;
   PersonsWishlist: { eventTitle?: string; eventId?: string };
+  EditEvent: { eventId: string };
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'HomeMain'>;
@@ -41,7 +43,20 @@ const Home = () => {
   const { unreadCount } = useNotificationBadge();
 
   const handleEventPress = (event: Event) => {
-    navigation.navigate('PersonsWishlist', { eventTitle: event.name, eventId: event.id });
+    showOwnEventActions({
+      eventName: event.name,
+      eventId: event.id,
+      onViewWishlist: () => {
+        navigation.navigate('PersonsWishlist', { eventTitle: event.name, eventId: event.id });
+      },
+      onEdit: () => {
+        navigation.navigate('EditEvent', { eventId: event.id });
+      },
+      onDeleted: () => {
+        setMyEvents((prev) => prev.filter((item) => item.id !== event.id));
+        Alert.alert('Event deleted', `"${event.name}" was removed.`);
+      },
+    });
   };
 
   const loadEvents = useCallback(async () => {

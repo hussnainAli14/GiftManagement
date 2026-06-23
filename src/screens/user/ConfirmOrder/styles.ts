@@ -73,17 +73,14 @@ export const styles = StyleSheet.create({
     color: colors.black,
     flex: 1,
   },
-  deliveryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  deliveryText: {
+  deliveryHint: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.fontSize.sm,
-    color: colors.black,
-    flex: 1,
+    color: colors.darkGray,
+    marginBottom: 12,
+  },
+  inputContainer: {
+    marginBottom: 12,
   },
   priceRow: {
     flexDirection: 'row',

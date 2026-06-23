@@ -8,7 +8,6 @@ import { colors } from '../../../theme';
 import { styles } from './styles';
 import { getMyVendorProfileApi } from '../../../api/vendorApi';
 import { createProductApi, uploadProductImageApi } from '../../../api/productApi';
-
 const CATEGORY_OPTIONS = [
   { label: 'Electronics', value: 'electronics' },
   { label: 'Home & Kitchen', value: 'home_kitchen' },
@@ -229,8 +228,6 @@ const AddProduct = () => {
         </TouchableOpacity>
       </View>
       </ScrollView>
-
-     
     </View>
   );
 };

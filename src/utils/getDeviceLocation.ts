@@ -34,14 +34,7 @@ export function getCurrentCoordinates(): Promise<DeviceCoordinates> {
   });
 }
 
-export async function getDeviceLocationForSignup(): Promise<DeviceCoordinates> {
-  const permitted = await requestLocationPermission();
-  if (!permitted) {
-    throw new Error('Location permission is required to create an account.');
-  }
-  return getCurrentCoordinates();
-}
-
+/** Used only from profile edit — not login or signup. */
 export async function getDeviceLocationForProfile(): Promise<DeviceCoordinates> {
   const permitted = await requestLocationPermission();
   if (!permitted) {
@@ -50,5 +43,12 @@ export async function getDeviceLocationForProfile(): Promise<DeviceCoordinates> 
   return getCurrentCoordinates();
 }
 
-/** @deprecated Use getDeviceLocationForSignup */
-export const getDeviceLocationForVendor = getDeviceLocationForSignup;
+/** @deprecated Signup uses the city dropdown — not device GPS. */
+export async function getDeviceLocationForSignup(): Promise<DeviceCoordinates> {
+  throw new Error('Please reload the app and select your city from the dropdown on signup.');
+}
+
+/** @deprecated Login does not use device location. */
+export async function getDeviceLocationForLogin(): Promise<DeviceCoordinates | undefined> {
+  return undefined;
+}

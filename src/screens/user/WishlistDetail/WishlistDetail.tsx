@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Tabs, WishlistDetailItem } from '../../../components';
 import type { WishlistDetailItemData } from '../../../components/WishlistDetailItem';
 import { getWishlistByEventApi } from '../../../api/wishlistApi';
@@ -16,7 +17,8 @@ type WishlistDetailRouteProp = RouteProp<
 
 type EventsStackParamList = {
   WishlistDetail: { wishlistName?: string; eventId?: string };
-  EditItem: { item: WishlistDetailItemData; categoryValue?: string | number };
+  BrowseVendorProducts: { eventId: string; listType?: 'wishlist' | 'nonWishlist' };
+  EditItem: { item: WishlistDetailItemData; categoryValue?: string | number; listType?: 'wishlist' | 'nonWishlist' };
 };
 
 type TabKey = 'wishlist' | 'nonWishlist';
@@ -81,16 +83,39 @@ const WishlistDetail = () => {
     }, [loadItems])
   );
 
+  useLayoutEffect(() => {
+    const eventId = route.params?.eventId;
+    navigation.setOptions({
+      headerRight: eventId
+        ? () => (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('BrowseVendorProducts', {
+                  eventId,
+                  listType: activeTab,
+                })
+              }
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="add" size={24} color="#000000" />
+            </TouchableOpacity>
+          )
+        : undefined,
+    });
+  }, [navigation, route.params?.eventId, activeTab]);
+
   const renderItem = ({ item }: { item: WishlistDetailItemData }) => (
     <WishlistDetailItem
       item={item}
       onViewDetails={(_item) => {
         // TODO: Navigate to item detail when implemented
       }}
-      onEdit={
-        activeTab === 'wishlist'
-          ? (i) => navigation.navigate('EditItem', { item: i })
-          : undefined
+      onEdit={(i) =>
+        navigation.navigate('EditItem', {
+          item: i,
+          listType: activeTab,
+        })
       }
     />
   );

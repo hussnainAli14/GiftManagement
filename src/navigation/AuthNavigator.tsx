@@ -1,17 +1,15 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import {
-  Welcome,
-  RoleSelection,
-  Login,
-  SignUp,
-  ForgotPassword,
-  OTP,
-  Verify,
-  ChangePassword,
-  Success,
-  Preferences,
-} from '../screens/auth';
+import Welcome from '../screens/auth/Welcome/Welcome';
+import RoleSelection from '../screens/auth/RoleSelection/RoleSelection';
+import Login from '../screens/auth/Login/Login';
+import SignUp from '../screens/auth/SignUp/SignUp';
+import ForgotPassword from '../screens/auth/ForgotPassword/ForgotPassword';
+import OTP from '../screens/auth/OTP/OTP';
+import Verify from '../screens/auth/Verify/Verify';
+import ChangePassword from '../screens/auth/ChangePassword/ChangePassword';
+import Success from '../screens/auth/Success/Success';
+import Preferences from '../screens/auth/Preferences/Preferences';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
 
 const Stack = createNativeStackNavigator();

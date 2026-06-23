@@ -17,6 +17,7 @@ export type WishlistItemModel = {
   allowsContribution?: boolean;
   category?: string;
   status?: 'available' | 'locked' | 'gifted' | string;
+  productId?: string | { _id?: string };
 };
 
 export type WishlistModel = {
@@ -61,6 +62,7 @@ export async function addWishlistItemApi(input: {
   category?: string;
   isContributable?: boolean;
   image?: string;
+  productId?: string;
 }): Promise<WishlistModel> {
   const response = await apiRequest<WishlistResponse>('/wishlists/add-item', {
     method: 'POST',
@@ -72,9 +74,9 @@ export async function addWishlistItemApi(input: {
         productName: input.title,
         price: input.price,
         category: input.category,
-        // Backend schema uses `allowsContribution`
         allowsContribution: input.isContributable ?? true,
         image: input.image,
+        productId: input.productId,
       },
     },
   });
