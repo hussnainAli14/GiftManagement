@@ -13,6 +13,8 @@ export interface PersonsWishlistItemData {
   contributionProgress?: number;
   /** Optional category for Gift Options screen (e.g. "Home & Kitchen") */
   category?: string;
+  /** Vendor business name shown on wishlist / non-wishlist cards */
+  vendorName?: string;
 }
 
 export interface PersonsWishlistItemProps {

@@ -5,6 +5,8 @@ export interface OrderItemEntry {
   quantity: number;
   price: string;
   image?: string;
+  productId?: string;
+  vendorId?: string;
 }
 
 export interface OrderEntry {
@@ -13,6 +15,13 @@ export interface OrderEntry {
   status: OrderStatus;
   items: OrderItemEntry[];
   total: string;
+  rawStatus?: string;
+  giftWrapping?: boolean;
+  giftWrappingFee?: number;
+  digitalGiftCard?: boolean;
+  digitalGiftCardFee?: number;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: string | null;
 }
 
 export const DUMMY_ORDERS: OrderEntry[] = [

@@ -107,14 +107,67 @@ export function formatEnglishUserAddress(user?: UserAddressFields): string {
   return '—';
 }
 
-/** Buyer city label for order cards and detail headers. */
+const PAKISTAN_PROVINCE_NAMES = new Set([
+  'punjab',
+  'sindh',
+  'khyber pakhtunkhwa',
+  'balochistan',
+  'gilgit-baltistan',
+  'azad kashmir',
+  'islamabad capital territory',
+]);
+
+function isProvinceName(value: string): boolean {
+  return PAKISTAN_PROVINCE_NAMES.has(value.trim().toLowerCase());
+}
+
+function resolveCityNameFromCandidates(candidates: Array<string | undefined>): string | undefined {
+  for (const candidate of candidates) {
+    const matched = matchPakistanCityByName(String(candidate || ''));
+    if (matched) return matched.name;
+  }
+  return undefined;
+}
+
+/** City label for a user (e.g. "Bahawalpur"). */
 export function getEnglishCityForUser(user?: UserAddressFields): string {
-  const address = formatEnglishUserAddress(user);
-  if (address !== '—') {
-    return address.split(',')[0]?.trim() || address;
+  const resolved = getEnglishCityLabelForUser(user);
+  return resolved || '—';
+}
+
+/** City and country for display (e.g. "Bahawalpur, Pakistan"). */
+export function getEnglishCityCountryForUser(user?: UserAddressFields): string {
+  const city = getEnglishCityLabelForUser(user);
+  if (!city) return '—';
+  const country = String(user?.country || user?.address?.country || 'Pakistan').trim() || 'Pakistan';
+  return `${city}, ${country}`;
+}
+
+function getEnglishCityLabelForUser(user?: UserAddressFields): string | undefined {
+  if (!user) return undefined;
+
+  const fromCityFields = resolveCityNameFromCandidates([user.city, user.address?.city]);
+  if (fromCityFields) return fromCityFields;
+
+  const coords = parseUserCoordinates(user);
+  if (coords) {
+    const nearest = getNearestPakistanCity(coords.lat, coords.lng);
+    if (nearest) return nearest.name;
   }
 
-  return '—';
+  const fromOtherFields = resolveCityNameFromCandidates([user.area, user.address?.state]);
+  if (fromOtherFields) return fromOtherFields;
+
+  const address = formatEnglishUserAddress(user);
+  if (address !== '—') {
+    for (const part of address.split(',').map((p) => p.trim()).filter(Boolean)) {
+      if (isProvinceName(part)) continue;
+      const matched = matchPakistanCityByName(part);
+      if (matched) return matched.name;
+    }
+  }
+
+  return undefined;
 }
 
 export function getAllPakistanCityNames(): string[] {

@@ -34,8 +34,10 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
     'OrderConfirmed',
     'ContributionProgress',
     'ContributionSuccess',
+    'ConfirmDeliveryReceipt',
     'MyOrders',
     'OrderDetail',
+    'ProductReview',
     'ChangePassword',
   ];
 

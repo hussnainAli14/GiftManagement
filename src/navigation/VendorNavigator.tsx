@@ -14,7 +14,9 @@ import {
   Orders,
   OrderDetails,
   Reports,
+  AddExpense,
   VendorProfile,
+  Users,
 } from '../screens/vendor';
 import { MyReviews } from '../screens/user';
 import { getDefaultHeaderOptions, getHeaderBackButton } from './headerConfig';
@@ -124,6 +126,16 @@ const DashboardStack = () => (
         headerLeft: getHeaderBackButton(navigation),
       })}
     />
+    <Stack.Screen
+      name="Users"
+      component={Users}
+      options={({ navigation }) => ({
+        headerShown: true,
+        headerTitle: 'Users',
+        ...getDefaultHeaderOptions(),
+        headerLeft: getHeaderBackButton(navigation),
+      })}
+    />
   </Stack.Navigator>
 );
 
@@ -189,16 +201,31 @@ const ReportsStack = () => (
     <Stack.Screen
       name="ReportsMain"
       component={Reports}
-      options={{
+      options={({ navigation }) => ({
         headerShown: true,
-        headerTitle: 'Reports',
+        headerTitle: 'Analytics',
         ...getDefaultHeaderOptions(),
         headerRight: () => (
-          <TouchableOpacity style={{ marginRight: 16 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icon name="filter-list" size={24} color="#000000" />
+          <TouchableOpacity
+            style={{ marginRight: 16 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            onPress={() => navigation.navigate('AddExpense' as never)}
+            activeOpacity={0.7}
+          >
+            <Icon name="add" size={26} color="#000000" />
           </TouchableOpacity>
         ),
-      }}
+      })}
+    />
+    <Stack.Screen
+      name="AddExpense"
+      component={AddExpense}
+      options={({ navigation }) => ({
+        headerShown: true,
+        headerTitle: 'Add Expense',
+        ...getDefaultHeaderOptions(),
+        headerLeft: getHeaderBackButton(navigation),
+      })}
     />
   </Stack.Navigator>
 );
@@ -247,7 +274,7 @@ const VendorNavigator = () => {
         name="Reports"
         component={ReportsStack}
         options={{
-          tabBarLabel: 'Reports',
+          tabBarLabel: 'Analytics',
           tabBarIcon: renderReportsIcon,
         }}
       />

@@ -8,6 +8,7 @@ import { colors } from '../../../theme';
 import { styles } from './styles';
 import { getMyVendorProfileApi } from '../../../api/vendorApi';
 import { createProductApi, uploadProductImageApi } from '../../../api/productApi';
+import { PRODUCT_AVAILABILITY_OPTIONS, normalizeAvailabilityStatus } from '../../../utils/productAvailability';
 const CATEGORY_OPTIONS = [
   { label: 'Electronics', value: 'electronics' },
   { label: 'Home & Kitchen', value: 'home_kitchen' },
@@ -24,6 +25,7 @@ const AddProduct = () => {
   const [price, setPrice] = useState('0.00');
   const [inventory, setInventory] = useState('0');
   const [category, setCategory] = useState<string | number | null>(null);
+  const [availabilityStatus, setAvailabilityStatus] = useState<string | number | null>('active');
   const [saving, setSaving] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -67,6 +69,10 @@ const AddProduct = () => {
         price: priceNum,
         inventory: invNum,
         category: String(category),
+        availabilityStatus: normalizeAvailabilityStatus(
+          typeof availabilityStatus === 'string' ? availabilityStatus : undefined,
+          invNum,
+        ),
       });
 
       // Best-effort: upload first selected photo as product image
@@ -167,6 +173,17 @@ const AddProduct = () => {
             value={category}
             onChange={(v) => setCategory(v)}
             data={CATEGORY_OPTIONS}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Dropdown
+            label="Availability"
+            placeholder="Select availability"
+            value={availabilityStatus}
+            onChange={(v) => setAvailabilityStatus(v)}
+            data={PRODUCT_AVAILABILITY_OPTIONS}
             containerStyle={{ marginBottom: 0 }}
           />
         </View>

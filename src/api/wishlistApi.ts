@@ -18,6 +18,8 @@ export type WishlistItemModel = {
   category?: string;
   status?: 'available' | 'locked' | 'gifted' | string;
   productId?: string | { _id?: string };
+  vendorId?: string;
+  vendorName?: string;
 };
 
 export type WishlistModel = {
@@ -43,6 +45,19 @@ export async function getWishlistByEventApi(eventId: string): Promise<WishlistMo
   return response.data ?? null;
 }
 
+export async function getWishlistByUserApi(userId: string): Promise<WishlistModel | null> {
+  const response = await apiRequest<WishlistResponse>(`/wishlists/user/${userId}`, { auth: true });
+  return response.data ?? null;
+}
+
+export async function getOrCreatePersonalWishlistApi(): Promise<WishlistModel> {
+  const response = await apiRequest<WishlistResponse>('/wishlists/personal', { auth: true });
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to load personal wishlist');
+  }
+  return response.data;
+}
+
 export async function createWishlistApi(eventId: string): Promise<WishlistModel> {
   const response = await apiRequest<WishlistResponse>('/wishlists', {
     method: 'POST',
@@ -56,13 +71,15 @@ export async function createWishlistApi(eventId: string): Promise<WishlistModel>
 }
 
 export async function addWishlistItemApi(input: {
-  eventId: string;
+  eventId?: string;
   title: string;
   price: number;
   category?: string;
   isContributable?: boolean;
   image?: string;
   productId?: string;
+  vendorId?: string;
+  vendorName?: string;
 }): Promise<WishlistModel> {
   const response = await apiRequest<WishlistResponse>('/wishlists/add-item', {
     method: 'POST',
@@ -77,6 +94,8 @@ export async function addWishlistItemApi(input: {
         allowsContribution: input.isContributable ?? true,
         image: input.image,
         productId: input.productId,
+        vendorId: input.vendorId,
+        vendorName: input.vendorName,
       },
     },
   });

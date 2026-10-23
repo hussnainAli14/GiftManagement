@@ -7,7 +7,7 @@ import { styles } from './styles';
 import { colors } from '../../../theme';
 
 type ReviewSubmittedSuccessParams = {
-  mode?: 'contribution_peer';
+  mode?: 'contribution_peer' | 'product';
   campaignId?: string;
 };
 
@@ -16,10 +16,15 @@ const ReviewSubmittedSuccess = () => {
   const navigation = useNavigation<NativeStackNavigationProp<Record<string, object>>>();
   const { mode, campaignId } = route.params ?? {};
   const isPeerReview = mode === 'contribution_peer';
+  const isProductReview = mode === 'product';
 
   const goBack = useCallback(() => {
     if (isPeerReview && campaignId) {
       navigation.navigate('ContributionProgress' as never, { campaignId } as never);
+      return;
+    }
+    if (isProductReview) {
+      navigation.navigate('MyOrders' as never);
       return;
     }
     const parent = navigation.getParent();
@@ -28,7 +33,7 @@ const ReviewSubmittedSuccess = () => {
       return;
     }
     navigation.navigate('HomeMain' as never);
-  }, [navigation, isPeerReview, campaignId]);
+  }, [navigation, isPeerReview, isProductReview, campaignId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -54,7 +59,9 @@ const ReviewSubmittedSuccess = () => {
         <Text style={styles.message}>
           {isPeerReview
             ? 'Your rating helps others decide who to invite for group contributions.'
-            : 'Your rating and feedback have been submitted for this vendor.'}
+            : isProductReview
+              ? 'Your gift rating helps other customers choose what to buy.'
+              : 'Your rating and feedback have been submitted for this vendor.'}
         </Text>
       </View>
     </View>

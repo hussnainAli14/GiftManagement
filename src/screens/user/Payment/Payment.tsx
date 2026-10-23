@@ -11,6 +11,7 @@ import { colors } from '../../../theme';
 import {
   createWishlistContributionOrderApi,
   createWishlistGiftOrderApi,
+  createDirectGiftOrderApi,
 } from '../../../api/orderApi';
 import { abandonContributionPaymentApi } from '../../../api/contributionCampaignApi';
 import { topUpWalletApi, payToWalletApi } from '../../../api/walletApi';
@@ -45,6 +46,9 @@ const Payment = () => {
   const isContribution = params?.isContribution === true;
   const eventTitle = params?.eventTitle;
   const wishlistItemId = params?.wishlistItemId;
+  const isDirectGift = params?.isDirectGift === true;
+  const productId = params?.productId;
+  const recipientUserId = params?.recipientUserId;
   const vendorId = params?.vendorId;
   const vendorName = params?.vendorName;
   const campaignId = params?.campaignId;
@@ -151,11 +155,54 @@ const Payment = () => {
       return;
     }
 
-    if (wishlistItemId) {
+    if (isDirectGift) {
+      if (!productId || !recipientUserId) {
+        Alert.alert(
+          'Payment unavailable',
+          'Could not complete this gift. Please go back and try again.',
+        );
+        return;
+      }
+
       setIsSubmitting(true);
       try {
+        const order = await createDirectGiftOrderApi({
+          recipientId: recipientUserId,
+          productId,
+          vendorId,
+          totalAmount: amountDue,
+          giftMessage: description,
+          deliveryRecipientName,
+          deliveryAddress,
+          deliveryCity,
+          customerPhone,
+        });
+        paymentCompletedRef.current = true;
+        setIsSubmitting(false);
+        if (vendorId) {
+          navigation.navigate('VendorReview', {
+            vendorId,
+            vendorName,
+            orderId: order._id,
+          });
+          return;
+        }
+        navigation.navigate('OrderConfirmed');
+        return;
+      } catch (error) {
+        Alert.alert(
+          'Payment failed',
+          error instanceof Error ? error.message : 'Unable to complete this gift.',
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    } else if (wishlistItemId) {
+      setIsSubmitting(true);
+      try {
+        let orderId = '';
         if (isFullGift) {
-          await createWishlistGiftOrderApi({
+          const order = await createWishlistGiftOrderApi({
             wishlistItemId,
             vendorId,
             totalAmount: amountDue,
@@ -165,6 +212,7 @@ const Payment = () => {
             deliveryCity,
             customerPhone,
           });
+          orderId = order._id;
         } else if (isContribution) {
           await createWishlistContributionOrderApi({
             wishlistItemId,
@@ -173,6 +221,24 @@ const Payment = () => {
             campaignId,
           });
         }
+        setIsSubmitting(false);
+        paymentCompletedRef.current = true;
+        if (vendorId && orderId) {
+          navigation.navigate('VendorReview', {
+            vendorId,
+            vendorName,
+            orderId,
+          });
+          return;
+        }
+        if (isFullGift) {
+          navigation.navigate('OrderConfirmed');
+        } else if (isContribution) {
+          navigation.navigate('ContributionSuccess', { eventTitle });
+        } else {
+          navigation.navigate('OrderConfirmed');
+        }
+        return;
       } catch (error) {
         Alert.alert(
           'Payment failed',
@@ -181,16 +247,13 @@ const Payment = () => {
         setIsSubmitting(false);
         return;
       }
-      setIsSubmitting(false);
-      paymentCompletedRef.current = true;
     }
 
     if (vendorId) {
-      navigation.navigate('VendorReview', {
-        vendorId,
-        vendorName,
-      });
-      return;
+      Alert.alert(
+        'Rate later',
+        'Open My Orders after purchase to rate this vendor from the order details.',
+      );
     }
 
     if (isFullGift) {

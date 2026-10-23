@@ -66,5 +66,75 @@ export const styles = StyleSheet.create({
   vendor: {
     fontSize: 13,
     color: colors.darkGray,
+    flex: 1,
+  },
+  vendorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  sectionHeaderText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.black,
+  },
+  sectionCount: {
+    fontSize: 12,
+    color: colors.darkGray,
+  },
+  cardOutOfStock: {
+    opacity: 0.72,
+  },
+  cardHot: {
+    borderColor: '#F97316',
+    backgroundColor: '#FFF7ED',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  nameHot: {
+    marginBottom: 0,
+  },
+  hotBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: '#EA580C',
+  },
+  hotBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.white,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+  },
+  outOfStockBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+  },
+  outOfStockText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B91C1C',
   },
 });

@@ -19,6 +19,11 @@ import {
   type ProductModel,
 } from '../../../api/productApi';
 import { API_ORIGIN } from '../../../api/config';
+import {
+  PRODUCT_AVAILABILITY_OPTIONS,
+  normalizeAvailabilityStatus,
+  type ProductAvailabilityStatus,
+} from '../../../utils/productAvailability';
 
 type EditProductParams = {
   product: VendorProductItem;
@@ -104,6 +109,7 @@ const EditProduct = () => {
   const [price, setPrice] = useState(initialValues?.price ?? '0.00');
   const [inventory, setInventory] = useState(initialValues?.inventory ?? '0');
   const [category, setCategory] = useState<string | number | null>(initialValues?.category ?? null);
+  const [availabilityStatus, setAvailabilityStatus] = useState<string | number | null>('active');
   const [imageUri, setImageUri] = useState<string | undefined>(initialValues?.imageUri);
 
   useEffect(() => {
@@ -113,6 +119,9 @@ const EditProduct = () => {
     setPrice(typeof loaded.price === 'number' ? loaded.price.toFixed(2) : '0.00');
     setInventory(typeof loaded.inventory === 'number' ? String(loaded.inventory) : '0');
     setCategory(loaded.category || null);
+    setAvailabilityStatus(
+      normalizeAvailabilityStatus(loaded.availabilityStatus, loaded.inventory),
+    );
     const nextImagesRaw = (loaded.images && Array.isArray(loaded.images) ? loaded.images : []).filter(Boolean);
     const fallback = loaded.image ? [loaded.image] : [];
     const nextImagesResolved = (nextImagesRaw.length ? nextImagesRaw : fallback)
@@ -162,6 +171,11 @@ const EditProduct = () => {
       return;
     }
 
+    const status = normalizeAvailabilityStatus(
+      typeof availabilityStatus === 'string' ? availabilityStatus : undefined,
+      parsedInventory,
+    ) as ProductAvailabilityStatus;
+
     try {
       setSaving(true);
       const updated = await updateProductApi(productId, {
@@ -170,6 +184,7 @@ const EditProduct = () => {
         price: parsedPrice,
         inventory: parsedInventory,
         category: cat,
+        availabilityStatus: status,
       });
       setLoaded(updated);
       navigation.goBack();
@@ -397,6 +412,19 @@ const EditProduct = () => {
             value={category}
             onChange={(v) => setCategory(v)}
             data={CATEGORY_OPTIONS}
+            containerStyle={{ marginBottom: 0 }}
+          />
+        </View>
+
+        {/* Availability */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Availability</Text>
+          <Dropdown
+            label="Status"
+            placeholder="Select availability"
+            value={availabilityStatus}
+            onChange={(v) => setAvailabilityStatus(v)}
+            data={PRODUCT_AVAILABILITY_OPTIONS}
             containerStyle={{ marginBottom: 0 }}
           />
         </View>

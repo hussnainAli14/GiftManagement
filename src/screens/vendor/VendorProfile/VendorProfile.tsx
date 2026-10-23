@@ -1,14 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { getMyVendorProfileApi, type VendorModel } from '../../../api/vendorApi';
+import {
+  getMyVendorProfileApi,
+  updateVendorProfileApi,
+  type VendorModel,
+} from '../../../api/vendorApi';
 import { useAuth } from '../../../context/AuthContext';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import { formatEnglishBusinessAddress } from '../../../utils/formatEnglishBusinessAddress';
+import { formatBusinessCityCountry } from '../../../utils/formatEnglishBusinessAddress';
 import { getAvatarImageSource } from '../../../utils/resolveUserAvatar';
 
 type VendorProfileStackParamList = {
@@ -29,6 +42,9 @@ export const VendorProfile = () => {
   const [error, setError] = useState<string>('');
   const [vendor, setVendor] = useState<VendorModel | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [businessNameDraft, setBusinessNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +53,10 @@ export const VendorProfile = () => {
       setError('');
       try {
         const v = await getMyVendorProfileApi();
-        if (!cancelled) setVendor(v);
+        if (!cancelled) {
+          setVendor(v);
+          setBusinessNameDraft(String(v?.businessName || v?.name || '').trim());
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load profile.');
       } finally {
@@ -49,9 +68,12 @@ export const VendorProfile = () => {
     };
   }, []);
 
-  const title = useMemo(() => user?.name || vendor?.name || 'Vendor', [user?.name, vendor?.name]);
+  const title = useMemo(
+    () => vendor?.businessName || user?.name || vendor?.name || 'Vendor',
+    [user?.name, vendor?.businessName, vendor?.name],
+  );
   const businessAddress = useMemo(
-    () => formatEnglishBusinessAddress(vendor ?? {}) ?? vendor?.businessAddress,
+    () => formatBusinessCityCountry(vendor ?? {}) ?? vendor?.businessAddress,
     [vendor],
   );
 
@@ -65,11 +87,50 @@ export const VendorProfile = () => {
     }
   };
 
+  const startEditName = () => {
+    setBusinessNameDraft(String(vendor?.businessName || vendor?.name || '').trim());
+    setEditingName(true);
+  };
+
+  const cancelEditName = () => {
+    setBusinessNameDraft(String(vendor?.businessName || vendor?.name || '').trim());
+    setEditingName(false);
+  };
+
+  const saveBusinessName = async () => {
+    if (!vendor?._id || savingName) return;
+    const nextName = businessNameDraft.trim();
+    if (nextName.length < 2) {
+      Alert.alert('Invalid name', 'Business name must be at least 2 characters.');
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      const updated = await updateVendorProfileApi(vendor._id, {
+        businessName: nextName,
+        name: nextName,
+      });
+      setVendor(updated);
+      setBusinessNameDraft(String(updated.businessName || nextName).trim());
+      setEditingName(false);
+      Alert.alert('Saved', 'Your vendor name was updated.');
+    } catch (e) {
+      Alert.alert(
+        'Could not save',
+        e instanceof Error ? e.message : 'Unable to update vendor name.',
+      );
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.headerCard}>
           <Image
@@ -119,8 +180,54 @@ export const VendorProfile = () => {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Business</Text>
               <View style={styles.row}>
-                <Text style={styles.label}>Business name</Text>
-                <Text style={styles.value}>{labelOrDash(vendor?.businessName)}</Text>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Business name</Text>
+                  {!editingName ? (
+                    <TouchableOpacity
+                      onPress={startEditName}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.editIconButton}
+                    >
+                      <Icon name="edit" size={18} color={colors.darkGray} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                {editingName ? (
+                  <View>
+                    <TextInput
+                      style={styles.nameInput}
+                      value={businessNameDraft}
+                      onChangeText={setBusinessNameDraft}
+                      placeholder="Enter business name"
+                      placeholderTextColor={colors.darkGray}
+                      autoCapitalize="words"
+                      autoFocus
+                      editable={!savingName}
+                    />
+                    <View style={styles.editActions}>
+                      <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={cancelEditName}
+                        disabled={savingName}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.saveButton, savingName ? styles.saveButtonDisabled : null]}
+                        onPress={saveBusinessName}
+                        disabled={savingName}
+                      >
+                        {savingName ? (
+                          <ActivityIndicator size="small" color={colors.white} />
+                        ) : (
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.value}>{labelOrDash(vendor?.businessName)}</Text>
+                )}
               </View>
               <View style={styles.row}>
                 <Text style={styles.label}>Business address</Text>
@@ -143,7 +250,7 @@ export const VendorProfile = () => {
             <View style={styles.tipCard}>
               <Icon name="info" size={18} color={colors.textSecondary} />
               <Text style={styles.tipText}>
-                Your profile details come from your vendor registration and can be enhanced later.
+                Tap the edit icon next to Business name to update how customers see your store.
               </Text>
             </View>
 
@@ -170,4 +277,3 @@ export const VendorProfile = () => {
 };
 
 export default VendorProfile;
-

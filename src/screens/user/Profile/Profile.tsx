@@ -16,7 +16,10 @@ import { colors } from '../../../theme';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
+  MyOrders: undefined;
+  OrderDetail: { order: unknown };
   WalletMain: undefined;
+  RewardsMain: undefined;
   MyReviews: undefined;
   ChangePassword: undefined;
   MyProfile: undefined;
@@ -76,7 +79,7 @@ const SettingRow = ({
 
 const Profile = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>>();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [notificationsOn, setNotificationsOn] = useState(true);
   const [loadingNotifPref, setLoadingNotifPref] = useState(true);
 
@@ -140,6 +143,16 @@ const Profile = () => {
     navigation.navigate('MyProfile');
   };
 
+  const handleMyWishlist = () => {
+    navigation.getParent()?.navigate('Home', {
+      screen: 'PersonsWishlist',
+      params: {
+        userId: user?.id,
+        eventTitle: 'Favorite Products',
+      },
+    });
+  };
+
   const handlePrivacyPolicy = () => {
     navigation.navigate('PrivacyPolicy');
   };
@@ -156,6 +169,20 @@ const Profile = () => {
       >
         <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>Account & Security</Text>
         <SettingRow
+          icon="favorite"
+          title="Favorite Products"
+          subtitle="Products from your city that friends can gift you"
+          onPress={handleMyWishlist}
+          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
+        />
+        <SettingRow
+          icon="receipt-long"
+          title="My Orders"
+          subtitle="View and manage your order history"
+          onPress={() => navigation.navigate('MyOrders')}
+          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
+        />
+        <SettingRow
           icon="people-outline"
           title="Manage Account"
           subtitle="Update personal info and preferences"
@@ -167,6 +194,13 @@ const Profile = () => {
           title="Wallet"
           subtitle="Balance, top-ups, and payments received"
           onPress={() => navigation.navigate('WalletMain')}
+          rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
+        />
+        <SettingRow
+          icon="stars"
+          title="Reward Points"
+          subtitle="Points earned from your purchases"
+          onPress={() => navigation.navigate('RewardsMain')}
           rightElement={<Icon name="chevron-right" size={24} color={colors.darkGray} />}
         />
         <SettingRow

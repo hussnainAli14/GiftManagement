@@ -5,12 +5,10 @@ export interface ConfirmOrderParams {
   item: PersonsWishlistItemData;
   vendor: VendorItem;
   eventTitle?: string;
-}
-
-export interface DeliveryAddress {
-  recipientName: string;
-  streetAddress: string;
-  cityId: string;
+  directGift?: boolean;
+  productId?: string;
+  recipientUserId?: string;
+  recipientName?: string;
 }
 
 /** Parse price string like "PKR 23,649.55" to number */

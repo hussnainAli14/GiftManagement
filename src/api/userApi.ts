@@ -16,6 +16,10 @@ export type UserProfile = {
   lat?: number;
   lng?: number;
   location?: { lat?: number; lng?: number };
+  city?: string;
+  area?: string;
+  country?: string;
+  address?: { city?: string; state?: string; country?: string };
 };
 
 export type UpdateMyProfilePayload = Partial<UserProfile> & {
@@ -98,6 +102,21 @@ export async function searchUsersApi(query: string): Promise<UserSearchResult[]>
 export async function getAllUsersAdminApi(): Promise<UserProfile[]> {
   const response = await apiRequest<unknown>('/users/admin/all', { auth: true });
   const data = unwrapData<UserProfile[] | UserProfile>(response);
+  return Array.isArray(data) ? data : [data];
+}
+
+export type AppUserDirectoryEntry = {
+  _id: string;
+  name: string;
+  city: string;
+  area?: string;
+  avatar?: string | null;
+};
+
+/** Vendor/admin directory of app users (name + city). */
+export async function getAppUsersDirectoryApi(): Promise<AppUserDirectoryEntry[]> {
+  const response = await apiRequest<unknown>('/users/directory', { auth: true });
+  const data = unwrapData<AppUserDirectoryEntry[] | AppUserDirectoryEntry>(response);
   return Array.isArray(data) ? data : [data];
 }
 

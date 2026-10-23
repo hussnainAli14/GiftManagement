@@ -8,6 +8,10 @@ export interface PaymentParams {
   eventTitle?: string;
   /** Wishlist item to fulfill and record as an order */
   wishlistItemId?: string;
+  /** Direct catalog gift to a friend (no wishlist). */
+  isDirectGift?: boolean;
+  productId?: string;
+  recipientUserId?: string;
   vendorId?: string;
   vendorName?: string;
   campaignId?: string;

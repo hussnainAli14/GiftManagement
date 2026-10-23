@@ -123,4 +123,24 @@ export const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium as '500',
     color: colors.primary,
   },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  cancelOrderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  cancelOrderText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium as '500',
+    color: colors.errorRed,
+  },
 });

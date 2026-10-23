@@ -59,6 +59,15 @@ export const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
   },
+  sendGiftButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
   moreButton: {
     padding: 4,
   },

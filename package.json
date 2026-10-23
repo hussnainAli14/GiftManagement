@@ -7,7 +7,7 @@
     "android": "react-native run-android",
     "android:pk": "npm run emulator:pakistan && react-native run-android",
     "emulator:pakistan": "adb emu geo fix 73.0479 33.6844",
-    "backend":"cd Online-gift-backend/ && npm run start",
+    "backend": "cd Online-gift-backend && npm start",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

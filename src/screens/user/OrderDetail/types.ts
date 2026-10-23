@@ -26,13 +26,46 @@ export const DEFAULT_PAYMENT = {
   method: 'Credit Card (Visa ending in 4242)',
 };
 
-/** Dummy timeline for order detail; in real app would come from API based on order.status */
-export function getOrderTimeline(_order: OrderEntry): StatusStep[] {
+/** Timeline derived from order status for Order Detail. */
+export function getOrderTimeline(order: OrderEntry): StatusStep[] {
+  const raw = (order.rawStatus ?? '').toLowerCase();
+  const isCancelled = order.status === 'Cancelled' || raw === 'cancelled';
+  const isDelivered =
+    order.status === 'Delivered' || raw === 'delivered' || raw === 'completed';
+  const isApproved = raw === 'approved';
+  const isPending = raw === 'pending' || (!raw && order.status === 'Processing');
+
+  if (isCancelled) {
+    return [
+      { label: 'Order Placed', icon: 'card-giftcard', completed: true, dateTime: order.date },
+      { label: 'Cancelled', icon: 'cancel', completed: true, dateTime: 'This order was cancelled' },
+    ];
+  }
+
   return [
-    { label: 'Order Placed', icon: 'card-giftcard', completed: true, dateTime: 'Thursday, Oct 26, 10:00 AM' },
-    { label: 'Processing', icon: 'card-giftcard', completed: true, dateTime: 'Thursday, Oct 26, 11:30 AM' },
-    { label: 'Shipped', icon: 'local-shipping', completed: true, dateTime: 'Thursday, Oct 26, 02:00 PM' },
-    { label: 'Out for Delivery', icon: 'local-shipping', completed: false, dateTime: 'Estimated by 05:00 PM' },
-    { label: 'Delivered', icon: 'inventory-2', completed: false, dateTime: 'Pending' },
+    {
+      label: 'Order Placed',
+      icon: 'card-giftcard',
+      completed: true,
+      dateTime: order.date,
+    },
+    {
+      label: 'Processing',
+      icon: 'hourglass-empty',
+      completed: isPending || isApproved || isDelivered,
+      dateTime: isPending ? 'Waiting for vendor' : order.date,
+    },
+    {
+      label: 'Approved',
+      icon: 'check-circle',
+      completed: isApproved || isDelivered,
+      dateTime: isApproved || isDelivered ? order.date : 'Pending',
+    },
+    {
+      label: 'Delivered',
+      icon: 'inventory-2',
+      completed: isDelivered,
+      dateTime: isDelivered ? order.date : 'Pending',
+    },
   ];
 }

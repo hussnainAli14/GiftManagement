@@ -4,6 +4,7 @@ export interface VendorItem {
   image: string;
   rating: number;
   locationLabel?: string;
+  cityLabel?: string;
   address?: string;
   distanceKm?: number;
   distance?: string;

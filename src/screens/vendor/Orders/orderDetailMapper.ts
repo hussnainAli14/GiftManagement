@@ -189,5 +189,15 @@ export function mapOrderToDetail(order: BackendOrder, listItem?: VendorOrderList
     shipping: formatPKR(0),
     tax: formatPKR(0),
     total: formatPKR(totalAmount),
+    giftWrapping: Boolean(order.giftWrapping),
+    giftWrappingFee: order.giftWrapping
+      ? formatPKR(Number(order.giftWrappingFee) || 0)
+      : undefined,
+    digitalGiftCard: Boolean(order.digitalGiftCard),
+    digitalGiftCardFee: order.digitalGiftCard
+      ? formatPKR(Number(order.digitalGiftCardFee) || 0)
+      : undefined,
+    digitalGiftCardMessage: order.digitalGiftCardMessage || '',
+    digitalGiftCardTheme: order.digitalGiftCardTheme || null,
   };
 }

@@ -42,7 +42,16 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 40,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  summary: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.darkGray,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 32,
     paddingHorizontal: 8,
   },
   primaryButton: {
@@ -53,5 +62,6 @@ export const styles = StyleSheet.create({
   secondaryButton: {
     width: '100%',
     borderRadius: 10,
+    marginBottom: 12,
   },
 });

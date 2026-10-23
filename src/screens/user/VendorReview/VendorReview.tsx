@@ -20,6 +20,7 @@ import { styles } from './styles';
 export type VendorReviewParams = {
   vendorId: string;
   vendorName?: string;
+  orderId: string;
 };
 
 type StackParamList = {
@@ -34,7 +35,11 @@ function resolveVendorLabel(vendor: { businessName?: string; name?: string }) {
 const VendorReview = () => {
   const route = useRoute<RouteProp<{ params: VendorReviewParams }, 'params'>>();
   const navigation = useNavigation<NativeStackNavigationProp<StackParamList>>();
-  const { vendorId, vendorName: routeVendorName } = route.params ?? { vendorId: '' };
+  const {
+    vendorId,
+    vendorName: routeVendorName,
+    orderId,
+  } = route.params ?? { vendorId: '', orderId: '' };
 
   const [displayName, setDisplayName] = useState(routeVendorName?.trim() ?? '');
   const [resolvingName, setResolvingName] = useState(!routeVendorName?.trim());
@@ -79,6 +84,10 @@ const VendorReview = () => {
       Alert.alert('Error', 'Vendor information is missing.');
       return;
     }
+    if (!orderId) {
+      Alert.alert('Error', 'Order information is missing. Rate the vendor from your order details.');
+      return;
+    }
     if (rating < 1) {
       Alert.alert('Rating required', 'Please select a star rating from 1 to 5.');
       return;
@@ -87,6 +96,7 @@ const VendorReview = () => {
     try {
       await createVendorReviewApi({
         vendorId,
+        orderId,
         rating,
         comment: review.trim() || undefined,
       });
@@ -107,7 +117,7 @@ const VendorReview = () => {
       >
         <Text style={styles.title}>Rate your experience</Text>
         <Text style={styles.subtitle}>
-          Share how your order or contribution went with this vendor.
+          Share how your purchase went with this vendor after buying their product.
         </Text>
 
         <View style={styles.vendorCard}>

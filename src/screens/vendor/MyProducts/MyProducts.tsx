@@ -7,7 +7,14 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import { getMyVendorProfileApi } from '../../../api/vendorApi';
-import { deleteProductApi, getVendorProductsApi, type ProductModel } from '../../../api/productApi';
+import { deleteProductApi, getVendorProductsApi, updateProductApi, type ProductModel } from '../../../api/productApi';
+import { stockStatusFromInventory, type StockStatus } from '../../../utils/productStock';
+import {
+  availabilityLabel,
+  normalizeAvailabilityStatus,
+  type ProductAvailabilityStatus,
+} from '../../../utils/productAvailability';
+import { getHotProductIds, sortProductsHotFirst } from '../../../utils/hotProduct';
 import { API_ORIGIN } from '../../../api/config';
 
 type MyProductsStackParamList = {
@@ -15,14 +22,17 @@ type MyProductsStackParamList = {
   EditProduct: { product: VendorProductItem };
 };
 
-export type StockStatus = 'In Stock' | 'Low Stock' | 'Out of Stock';
+export type { StockStatus };
 
 export type VendorProductItem = {
   id: string;
   name: string;
   price: string;
   stockStatus: StockStatus;
+  availabilityStatus: ProductAvailabilityStatus;
   imageUri?: string | number;
+  isHot?: boolean;
+  salesCount?: number;
 };
 
 function formatPrice(price: number | undefined): string {
@@ -30,22 +40,19 @@ function formatPrice(price: number | undefined): string {
   return `Rs ${n.toFixed(2)}`;
 }
 
-function stockStatusFromInventory(inv: number | undefined): StockStatus {
-  const n = typeof inv === 'number' ? inv : 0;
-  if (n <= 0) return 'Out of Stock';
-  if (n <= 5) return 'Low Stock';
-  return 'In Stock';
-}
-
-function toVendorProductItem(p: ProductModel): VendorProductItem {
+function toVendorProductItem(p: ProductModel, hotIds: Set<string>): VendorProductItem {
   const raw = (p.image || '').trim();
   const imageUri = raw ? (raw.startsWith('/') ? `${API_ORIGIN}${raw}` : raw) : undefined;
+  const availabilityStatus = normalizeAvailabilityStatus(p.availabilityStatus, p.inventory);
   return {
     id: String(p._id),
     name: p.name || 'Product',
     price: formatPrice(p.price),
     stockStatus: stockStatusFromInventory(p.inventory),
+    availabilityStatus,
     imageUri,
+    isHot: hotIds.has(String(p._id)),
+    salesCount: Number(p.salesCount) || 0,
   };
 }
 
@@ -66,7 +73,9 @@ const MyProducts = () => {
       const vendorId = String(vendor?._id || '');
       if (!vendorId) throw new Error('Vendor profile not found');
       const rows = await getVendorProductsApi(vendorId);
-      setProducts(rows.map(toVendorProductItem));
+      const hotIds = getHotProductIds(rows);
+      const sorted = sortProductsHotFirst(rows, hotIds);
+      setProducts(sorted.map((row) => toVendorProductItem(row, hotIds)));
     } catch (e) {
       setProducts([]);
       setError(e instanceof Error ? e.message : 'Failed to load products');
@@ -87,6 +96,50 @@ const MyProducts = () => {
     await load();
     setRefreshing(false);
   }, [load]);
+
+  const renderAvailabilityStatus = (status: ProductAvailabilityStatus) => {
+    const label = availabilityLabel(status);
+    if (status === 'out_of_stock' || status === 'discontinued') {
+      return <Text style={styles.stockOutOfStock}>{label}</Text>;
+    }
+    if (status === 'inactive') {
+      return <Text style={styles.stockLowStock}>{label}</Text>;
+    }
+    return <Text style={styles.stockInStock}>{label}</Text>;
+  };
+
+  const handleQuickStatus = (item: VendorProductItem) => {
+    Alert.alert('Availability', `Set status for "${item.name}"`, [
+      {
+        text: 'Active',
+        onPress: () => changeStatus(item, 'active'),
+      },
+      {
+        text: 'Inactive',
+        onPress: () => changeStatus(item, 'inactive'),
+      },
+      {
+        text: 'Out of Stock',
+        onPress: () => changeStatus(item, 'out_of_stock'),
+      },
+      {
+        text: 'Discontinued',
+        onPress: () => changeStatus(item, 'discontinued'),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const changeStatus = async (item: VendorProductItem, status: ProductAvailabilityStatus) => {
+    try {
+      await updateProductApi(item.id, { availabilityStatus: status });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === item.id ? { ...p, availabilityStatus: status } : p)),
+      );
+    } catch (e) {
+      Alert.alert('Could not update status', e instanceof Error ? e.message : 'Please try again.');
+    }
+  };
 
   const renderStockStatus = (status: StockStatus) => {
     if (status === 'Out of Stock') {
@@ -140,7 +193,7 @@ const MyProducts = () => {
   }, [error, loading]);
 
   const renderProductCard = ({ item }: { item: VendorProductItem }) => (
-    <View style={styles.card}>
+    <View style={[styles.card, item.isHot ? styles.cardHot : null]}>
       <View style={styles.productImage}>
         {item.imageUri ? (
           <Image
@@ -151,13 +204,27 @@ const MyProducts = () => {
         ) : (
           <Icon name="inventory-2" size={48} color={colors.darkGray} />
         )}
+        {item.isHot ? (
+          <View style={styles.hotBadgeOverlay}>
+            <Icon name="local-fire-department" size={14} color={colors.white} />
+            <Text style={styles.hotBadgeText}>Hot Product</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.cardBody}>
         <View style={styles.namePriceRow}>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
           <Text style={styles.productPrice}>{item.price}</Text>
         </View>
-        {renderStockStatus(item.stockStatus)}
+        {item.isHot ? (
+          <Text style={styles.hotSalesHint}>
+            Top seller · {item.salesCount || 0} sold
+          </Text>
+        ) : null}
+        <TouchableOpacity onPress={() => handleQuickStatus(item)} activeOpacity={0.7}>
+          {renderAvailabilityStatus(item.availabilityStatus)}
+        </TouchableOpacity>
+        {item.availabilityStatus === 'active' ? renderStockStatus(item.stockStatus) : null}
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.editButton}

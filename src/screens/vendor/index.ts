@@ -8,4 +8,5 @@ export { Vendors } from './Vendors';
 export { Orders } from './Orders';
 export { OrderDetails } from './Orders/OrderDetails';
 export { Reports } from './Reports';
+export { AddExpense } from './AddExpense';
 export { VendorProfile } from './VendorProfile';

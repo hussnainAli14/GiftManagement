@@ -175,6 +175,8 @@ const GiftOptions = () => {
   const [giftingMethod, setGiftingMethod] = useState<GiftingMethod>('full');
 
   const recipientUserId = eventOwnerId ?? wishlistOwnerId;
+  /** Favorite Products / personal gift — no event, only Full Gift. */
+  const isEventGift = Boolean(eventId);
 
   const handleConfirm = () => {
     if (giftingMethod === 'pay_to_wallet') {
@@ -233,6 +235,9 @@ const GiftOptions = () => {
             {eventTitle ? (
               <Text style={styles.productMeta}>From: {eventTitle}</Text>
             ) : null}
+            {item.vendorName ? (
+              <Text style={styles.productMeta}>Vendor: {item.vendorName}</Text>
+            ) : null}
             {item.category ? (
               <Text style={styles.productMeta}>Category: {item.category}</Text>
             ) : null}
@@ -273,69 +278,72 @@ const GiftOptions = () => {
           <Icon name="chevron-right" size={24} color={colors.darkGray} />
         </TouchableOpacity>
 
-        {/* Pay to wallet */}
-        <TouchableOpacity
-          style={[
-            styles.optionCard,
-            giftingMethod === 'pay_to_wallet' ? styles.optionCardSelected : styles.optionCardUnselected,
-          ]}
-          onPress={() => setGiftingMethod('pay_to_wallet')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.radioOuter,
-              giftingMethod === 'pay_to_wallet' ? styles.radioOuterSelected : styles.radioOuterUnselected,
-            ]}
-          >
-            {giftingMethod === 'pay_to_wallet' ? <View style={styles.radioInner} /> : null}
-          </View>
-          <Icon
-            name="account-balance-wallet"
-            size={24}
-            color={giftingMethod === 'pay_to_wallet' ? colors.primary : colors.darkGray}
-            style={styles.optionIcon}
-          />
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Pay to wallet</Text>
-            <Text style={styles.optionDescription}>
-              Send any amount to the event host&apos;s wallet.
-            </Text>
-          </View>
-          <Icon name="chevron-right" size={24} color={colors.darkGray} />
-        </TouchableOpacity>
+        {/* Pay to wallet + Contribute — only for event gifts */}
+        {isEventGift ? (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                giftingMethod === 'pay_to_wallet' ? styles.optionCardSelected : styles.optionCardUnselected,
+              ]}
+              onPress={() => setGiftingMethod('pay_to_wallet')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.radioOuter,
+                  giftingMethod === 'pay_to_wallet' ? styles.radioOuterSelected : styles.radioOuterUnselected,
+                ]}
+              >
+                {giftingMethod === 'pay_to_wallet' ? <View style={styles.radioInner} /> : null}
+              </View>
+              <Icon
+                name="account-balance-wallet"
+                size={24}
+                color={giftingMethod === 'pay_to_wallet' ? colors.primary : colors.darkGray}
+                style={styles.optionIcon}
+              />
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Pay to wallet</Text>
+                <Text style={styles.optionDescription}>
+                  Send any amount to the event host&apos;s wallet.
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.darkGray} />
+            </TouchableOpacity>
 
-        {/* Contribute option */}
-        <TouchableOpacity
-          style={[
-            styles.optionCard,
-            giftingMethod === 'contribute' ? styles.optionCardSelected : styles.optionCardUnselected,
-          ]}
-          onPress={() => setGiftingMethod('contribute')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.radioOuter,
-              giftingMethod === 'contribute' ? styles.radioOuterSelected : styles.radioOuterUnselected,
-            ]}
-          >
-            {giftingMethod === 'contribute' ? <View style={styles.radioInner} /> : null}
-          </View>
-          <Icon
-            name="volunteer-activism"
-            size={24}
-            color={giftingMethod === 'contribute' ? colors.primary : colors.darkGray}
-            style={styles.optionIcon}
-          />
-          <View style={styles.optionText}>
-            <Text style={styles.optionTitle}>Contribute</Text>
-            <Text style={styles.optionDescription}>
-              Contribute a partial amount towards the item.
-            </Text>
-          </View>
-          <Icon name="chevron-right" size={24} color={colors.darkGray} />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                giftingMethod === 'contribute' ? styles.optionCardSelected : styles.optionCardUnselected,
+              ]}
+              onPress={() => setGiftingMethod('contribute')}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.radioOuter,
+                  giftingMethod === 'contribute' ? styles.radioOuterSelected : styles.radioOuterUnselected,
+                ]}
+              >
+                {giftingMethod === 'contribute' ? <View style={styles.radioInner} /> : null}
+              </View>
+              <Icon
+                name="volunteer-activism"
+                size={24}
+                color={giftingMethod === 'contribute' ? colors.primary : colors.darkGray}
+                style={styles.optionIcon}
+              />
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Contribute</Text>
+                <Text style={styles.optionDescription}>
+                  Contribute a partial amount towards the item.
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={24} color={colors.darkGray} />
+            </TouchableOpacity>
+          </>
+        ) : null}
 
         <Button
           variant="primary"

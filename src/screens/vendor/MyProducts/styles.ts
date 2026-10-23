@@ -24,6 +24,11 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  cardHot: {
+    borderColor: '#F97316',
   },
   productImage: {
     width: '100%',
@@ -36,6 +41,31 @@ export const styles = StyleSheet.create({
   productImageFill: {
     width: '100%',
     height: '100%',
+  },
+  hotBadgeOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#EA580C',
+  },
+  hotBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.white,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  hotSalesHint: {
+    ...typography.textStyles.caption,
+    color: '#C2410C',
+    fontWeight: '600',
+    marginBottom: 8,
   },
   cardBody: {
     padding: 12,

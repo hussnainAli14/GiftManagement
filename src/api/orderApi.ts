@@ -49,7 +49,16 @@ export type BackendOrder = {
   }>;
   totalAmount?: number;
   status?: 'pending' | 'approved' | 'completed' | 'cancelled' | 'delivered' | string;
+  deliveryReceiptStatus?: 'pending' | 'confirmed' | 'denied' | null;
+  deliveryConfirmedAt?: string;
   createdAt?: string;
+  giftWrapping?: boolean;
+  giftWrappingFee?: number;
+  giftMessage?: string;
+  digitalGiftCard?: boolean;
+  digitalGiftCardFee?: number;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: string | null;
 };
 
 type OrderResponse = {
@@ -90,12 +99,13 @@ export async function updateVendorOrderStatusApi(
 }
 
 export type OrderItemModel = {
-  productId?: { name?: string; price?: number; image?: string };
+  productId?: { _id?: string; name?: string; price?: number; image?: string } | string;
   giftId?: { name?: string; price?: number; image?: string };
   title?: string;
   price?: number;
   image?: string;
   quantity?: number;
+  vendorId?: string | { _id?: string };
 };
 
 export type OrderModel = {
@@ -106,6 +116,19 @@ export type OrderModel = {
   totalAmount?: number;
   createdAt?: string;
   items?: OrderItemModel[];
+  pointsAwarded?: number;
+  rewardPointsBalance?: number;
+  discountPercent?: number;
+  discountAmount?: number;
+  couponCode?: string | null;
+  pointsRedeemed?: number;
+  subtotalBeforeDiscount?: number;
+  giftWrapping?: boolean;
+  giftWrappingFee?: number;
+  digitalGiftCard?: boolean;
+  digitalGiftCardFee?: number;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: string | null;
 };
 
 export async function getMyOrdersApi(userId: string): Promise<OrderModel[]> {
@@ -123,8 +146,37 @@ export async function createWishlistGiftOrderApi(input: {
   deliveryAddress?: string;
   deliveryCity?: string;
   customerPhone?: string;
+  applyRewardCoupon?: boolean;
+  giftWrapping?: boolean;
+  digitalGiftCard?: boolean;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: 'classic' | 'birthday' | 'thank_you' | 'celebration';
 }): Promise<OrderModel> {
   const response = await apiRequest<unknown>('/orders/wishlist-gift', {
+    method: 'POST',
+    auth: true,
+    body: input,
+  });
+  return unwrapData<OrderModel>(response);
+}
+
+export async function createDirectGiftOrderApi(input: {
+  recipientId: string;
+  productId: string;
+  vendorId?: string;
+  totalAmount: number;
+  giftMessage?: string;
+  deliveryRecipientName?: string;
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  customerPhone?: string;
+  applyRewardCoupon?: boolean;
+  giftWrapping?: boolean;
+  digitalGiftCard?: boolean;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: 'classic' | 'birthday' | 'thank_you' | 'celebration';
+}): Promise<OrderModel> {
+  const response = await apiRequest<unknown>('/orders/direct-gift', {
     method: 'POST',
     auth: true,
     body: input,
@@ -151,4 +203,37 @@ export async function getGiftHistoryWithUserApi(userId: string): Promise<OrderMo
   const response = await apiRequest<unknown>(`/orders/with-user/${userId}`, { auth: true });
   const data = unwrapData<OrderModel[] | OrderModel>(response);
   return Array.isArray(data) ? data : [data];
+}
+
+export async function getOrderByIdApi(orderId: string): Promise<BackendOrder> {
+  const res = await apiRequest<OrderResponse>(`/orders/${encodeURIComponent(orderId)}`, { auth: true });
+  return unwrapData<BackendOrder>(res);
+}
+
+/** Recipient confirms (Yes) or denies (No) that they received the delivered order. */
+export async function confirmDeliveryReceiptApi(
+  orderId: string,
+  confirmed: boolean,
+): Promise<BackendOrder> {
+  const res = await apiRequest<OrderResponse>(
+    `/orders/${encodeURIComponent(orderId)}/confirm-delivery`,
+    {
+      method: 'POST',
+      auth: true,
+      body: { confirmed },
+    },
+  );
+  return unwrapData<BackendOrder>(res);
+}
+
+/** Buyer cancels a pending order. */
+export async function cancelOrderApi(orderId: string): Promise<BackendOrder> {
+  const res = await apiRequest<OrderResponse>(
+    `/orders/${encodeURIComponent(orderId)}/cancel`,
+    {
+      method: 'POST',
+      auth: true,
+    },
+  );
+  return unwrapData<BackendOrder>(res);
 }

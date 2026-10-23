@@ -11,6 +11,7 @@ import { colors } from '../../../theme';
 import { styles } from './styles';
 import { getVendorsNearUserApi, type VendorModel } from '../../../api/vendorApi';
 import { formatVendorLocation } from '../../../utils/formatVendorLocation';
+import { formatBusinessCityCountry } from '../../../utils/formatEnglishBusinessAddress';
 
 function normalizeRating(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -31,6 +32,7 @@ function mapVendorToItem(v: VendorModel, index: number): VendorItem {
     image: `https://picsum.photos/seed/vendor-${v._id}/${400 + (index % 5)}/200`,
     rating,
     locationLabel,
+    cityLabel: formatBusinessCityCountry(v),
   };
   if (typeof v.distanceKm === 'number' && Number.isFinite(v.distanceKm)) {
     item.distanceKm = v.distanceKm;
@@ -55,6 +57,7 @@ type SelectVendorStackParamList = {
     item: PersonsWishlistItemData;
     vendor: VendorItem;
     eventTitle?: string;
+    recipientUserId?: string;
   };
   ContributionProgress: {
     item: PersonsWishlistItemData;
@@ -120,7 +123,7 @@ const SelectVendor = () => {
     if (!recipientUserId) {
       setVendors([]);
       setFetchError(false);
-      setEmptyHint('Gift recipient is unknown. Cannot show nearby vendors.');
+      setEmptyHint('Gift recipient is unknown. Cannot show vendors for their city.');
       setLoading(false);
       return;
     }
@@ -131,16 +134,21 @@ const SelectVendor = () => {
       try {
         setFetchError(false);
         setEmptyHint(undefined);
-        const { vendors: list, hasRecipientLocation } = await getVendorsNearUserApi(recipientUserId);
+        const {
+          vendors: list,
+          hasRecipientCity,
+          recipientCity,
+        } = await getVendorsNearUserApi(recipientUserId);
         const mapped = list.map((v, i) => mapVendorToItem(v, i));
         if (!cancelled) {
           setVendors(mapped);
-          if (!hasRecipientLocation) {
+          if (!hasRecipientCity) {
             setEmptyHint(
-              'This person has not set their location yet. Ask them to update their profile.',
+              'This person has not set their city yet. Ask them to update their profile.',
             );
           } else if (mapped.length === 0) {
-            setEmptyHint('No vendors deliver near this person\'s location yet.');
+            const cityLabel = recipientCity ? ` in ${recipientCity}` : '';
+            setEmptyHint(`No vendors are available${cityLabel} for this gift yet.`);
           }
         }
       } catch {
@@ -181,7 +189,12 @@ const SelectVendor = () => {
       });
       return;
     }
-    navigation.navigate('ConfirmOrder', { item: wishlistItem, vendor: selectedVendor, eventTitle });
+    navigation.navigate('ConfirmOrder', {
+      item: wishlistItem,
+      vendor: selectedVendor,
+      eventTitle,
+      recipientUserId,
+    });
   };
 
   const renderVendorRow = ({ item: vendor }: { item: VendorItem }) => {
@@ -248,7 +261,7 @@ const SelectVendor = () => {
 
   const emptyMessage = fetchError
     ? 'Could not load vendors. Check your connection and try again.'
-    : emptyHint ?? 'No nearby vendors available for this gift recipient.';
+    : emptyHint ?? 'No vendors available in this gift recipient\'s city.';
 
   return (
     <View style={styles.container}>

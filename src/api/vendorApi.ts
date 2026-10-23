@@ -31,15 +31,19 @@ type VendorsNearUserResponse = {
   success?: boolean;
   data?: VendorNearEntry[];
   hasRecipientLocation?: boolean;
+  hasRecipientCity?: boolean;
+  recipientCity?: string | null;
   message?: string;
 };
 
 /**
- * Vendors near a gift recipient (by user id), sorted closest first.
+ * Approved vendors in the gift recipient's city, sorted closest first when distance is known.
  */
 export async function getVendorsNearUserApi(userId: string): Promise<{
   vendors: VendorModel[];
   hasRecipientLocation: boolean;
+  hasRecipientCity: boolean;
+  recipientCity?: string;
 }> {
   const response = await apiRequest<VendorsNearUserResponse>(
     `/vendors/near-user/${encodeURIComponent(userId)}`,
@@ -61,7 +65,13 @@ export async function getVendorsNearUserApi(userId: string): Promise<{
   return {
     vendors,
     hasRecipientLocation: response?.hasRecipientLocation === true,
+    hasRecipientCity: response?.hasRecipientCity === true,
+    recipientCity: response?.recipientCity ?? undefined,
   };
+}
+
+export async function getVendorByIdApi(id: string): Promise<VendorModel> {
+  return apiRequest<VendorModel>(`/vendors/${encodeURIComponent(id)}`, { auth: false });
 }
 
 export async function getVendorsApi(): Promise<VendorModel[]> {
@@ -80,6 +90,18 @@ export async function getMyVendorProfileApi(): Promise<VendorModel> {
   return unwrapData<VendorModel>(res);
 }
 
+export async function updateVendorProfileApi(
+  vendorId: string,
+  payload: { businessName?: string; name?: string; description?: string },
+): Promise<VendorModel> {
+  const res = await apiRequest<unknown>(`/vendors/${encodeURIComponent(vendorId)}`, {
+    method: 'PUT',
+    auth: true,
+    body: payload,
+  });
+  return unwrapData<VendorModel>(res);
+}
+
 export type VendorDashboardStats = {
   totalOrders: number;
   totalSales: number;
@@ -88,9 +110,94 @@ export type VendorDashboardStats = {
   customerCount: number;
   walletBalance: number;
   topProducts: Array<{ name?: string; count: number }>;
+  lowStockProducts?: Array<{ productId: string; name: string; remaining: number }>;
+  lowStockThreshold?: number;
 };
 
 export async function getVendorDashboardStatsApi(): Promise<VendorDashboardStats> {
   const res = await apiRequest<unknown>('/vendors/dashboard-stats', { auth: true });
   return unwrapData<VendorDashboardStats>(res);
+}
+
+export type VendorAnalyticsProduct = {
+  productId?: string | null;
+  name?: string;
+  image?: string | null;
+  unitsSold: number;
+  revenue: number;
+};
+
+export type VendorExpense = {
+  _id: string;
+  vendorId: string;
+  amount: number;
+  category: string;
+  note?: string;
+  incurredAt: string;
+  createdAt?: string;
+};
+
+export type VendorAnalytics = {
+  range: { months: number; start: string; end: string };
+  summaries: {
+    totalRevenue: number;
+    totalSales?: number;
+    totalExpenses: number;
+    profit: number;
+    totalUnits: number;
+    orderCount: number;
+    productCount: number;
+  };
+  mostSoldProduct: VendorAnalyticsProduct | null;
+  highestRevenueProduct: VendorAnalyticsProduct | null;
+  monthlySales: {
+    months: string[];
+    values: number[];
+  };
+  monthlyExpenses?: {
+    months: string[];
+    values: number[];
+  };
+  monthlyProfit?: {
+    months: string[];
+    values: number[];
+  };
+  recentExpenses?: VendorExpense[];
+};
+
+export async function getVendorAnalyticsApi(months = 6): Promise<VendorAnalytics> {
+  const res = await apiRequest<unknown>(
+    `/vendors/analytics?months=${encodeURIComponent(String(months))}`,
+    { auth: true },
+  );
+  return unwrapData<VendorAnalytics>(res);
+}
+
+export async function listVendorExpensesApi(limit = 50): Promise<VendorExpense[]> {
+  const res = await apiRequest<unknown>(
+    `/vendors/expenses?limit=${encodeURIComponent(String(limit))}`,
+    { auth: true },
+  );
+  return unwrapData<VendorExpense[]>(res);
+}
+
+export async function createVendorExpenseApi(payload: {
+  amount: number;
+  category: string;
+  note?: string;
+  incurredAt?: string;
+}): Promise<VendorExpense> {
+  const res = await apiRequest<unknown>('/vendors/expenses', {
+    method: 'POST',
+    auth: true,
+    body: payload,
+  });
+  return unwrapData<VendorExpense>(res);
+}
+
+export async function deleteVendorExpenseApi(expenseId: string): Promise<void> {
+  await apiRequest<unknown>(`/vendors/expenses/${encodeURIComponent(expenseId)}`, {
+    method: 'DELETE',
+    auth: true,
+  });
 }

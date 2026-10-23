@@ -8,6 +8,8 @@ export type NonWishlistItemModel = {
   image?: string;
   category?: string;
   productId?: string | { _id?: string };
+  vendorId?: string;
+  vendorName?: string;
 };
 
 export type NonWishlistModel = {
@@ -27,13 +29,28 @@ export async function getNonWishlistByEventApi(eventId: string): Promise<NonWish
   return response.data ?? null;
 }
 
+export async function getNonWishlistByUserApi(userId: string): Promise<NonWishlistModel | null> {
+  const response = await apiRequest<NonWishlistResponse>(`/non-wishlists/user/${userId}`, { auth: true });
+  return response.data ?? null;
+}
+
+export async function getOrCreatePersonalNonWishlistApi(): Promise<NonWishlistModel> {
+  const response = await apiRequest<NonWishlistResponse>('/non-wishlists/personal', { auth: true });
+  if (!response.data) {
+    throw new Error(response.message || 'Failed to load personal non-wishlist');
+  }
+  return response.data;
+}
+
 export async function addNonWishlistItemApi(input: {
-  eventId: string;
+  eventId?: string;
   title: string;
   price: number;
   category?: string;
   image?: string;
   productId?: string;
+  vendorId?: string;
+  vendorName?: string;
 }): Promise<NonWishlistModel> {
   const response = await apiRequest<NonWishlistResponse>('/non-wishlists/add-item', {
     method: 'POST',
@@ -46,6 +63,8 @@ export async function addNonWishlistItemApi(input: {
         category: input.category,
         image: input.image,
         productId: input.productId,
+        vendorId: input.vendorId,
+        vendorName: input.vendorName,
       },
     },
   });

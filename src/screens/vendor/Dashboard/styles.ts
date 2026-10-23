@@ -102,6 +102,60 @@ export const styles = StyleSheet.create({
   buttonIcon: {
     marginRight: 8,
   },
+  lowStockSection: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  lowStockHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  lowStockTitle: {
+    ...typography.textStyles.h4,
+    color: '#B45309',
+    fontWeight: '700',
+  },
+  lowStockHint: {
+    ...typography.textStyles.caption,
+    color: colors.textSecondary,
+  },
+  lowStockCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  lowStockIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lowStockBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  lowStockName: {
+    ...typography.textStyles.body,
+    fontWeight: '700',
+    color: colors.black,
+    marginBottom: 2,
+  },
+  lowStockRemaining: {
+    ...typography.textStyles.caption,
+    color: '#B45309',
+    fontWeight: '600',
+  },
 });
 
 export const VENDOR_BLUE_COLOR = VENDOR_BLUE;

@@ -1,128 +1,199 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
-import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getReportsOverviewApi, type ReportsOverview } from '../../../api/reportsApi';
-import { colors } from '../../../theme';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  styles,
-  CHART_HEIGHT,
-  DONUT_SIZE,
-  DONUT_CENTER_RADIUS,
-} from './styles';
+  View,
+  Text,
+  ScrollView,
+  Image,
+  Dimensions,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  deleteVendorExpenseApi,
+  getVendorAnalyticsApi,
+  type VendorAnalytics,
+  type VendorAnalyticsProduct,
+  type VendorExpense,
+} from '../../../api/vendorApi';
+import { colors } from '../../../theme';
+import { styles, CHART_HEIGHT } from './styles';
 
 const REPORT_BLUE = '#2563EB';
+const EXPENSE_GRAY = '#6B7280';
+const PROFIT_GREEN = '#16A34A';
 const CHART_LABEL_COLOR = '#666666';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  inventory: 'Inventory',
+  shipping: 'Shipping',
+  rent: 'Rent',
+  utilities: 'Utilities',
+  marketing: 'Marketing',
+  salaries: 'Salaries',
+  other: 'Other',
+};
 
 const chartConfigBase = {
   backgroundColor: 'transparent',
   backgroundGradientFrom: '#FFFFFF',
   backgroundGradientTo: '#FFFFFF',
   backgroundGradientToOpacity: 0,
-  color: () => CHART_LABEL_COLOR,
+  color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
   labelColor: () => CHART_LABEL_COLOR,
   decimalPlaces: 0,
   propsForBackgroundLines: { strokeDasharray: '', stroke: '#E0E0E0', strokeWidth: 0.5 },
 };
 
-function formatCompact(n: number, prefix = ''): string {
+function formatPkr(n: number): string {
   const num = Number.isFinite(n) ? n : 0;
-  const abs = Math.abs(num);
-  if (abs >= 1_000_000) return `${prefix}${(num / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${prefix}${(num / 1_000).toFixed(1)}K`;
-  return `${prefix}${Math.round(num)}`;
+  return `PKR ${Math.round(num).toLocaleString('en-PK')}`;
 }
 
-function clampArr(arr: number[] | undefined, len: number): number[] {
-  const a = Array.isArray(arr) ? arr : [];
-  if (a.length === len) return a;
-  if (a.length > len) return a.slice(0, len);
-  return [...a, ...Array.from({ length: len - a.length }, () => 0)];
+function formatCompact(n: number): string {
+  const num = Number.isFinite(n) ? n : 0;
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000) return `PKR ${(num / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `PKR ${(num / 1_000).toFixed(1)}K`;
+  return `PKR ${Math.round(num)}`;
 }
+
+function ProductHighlightCard({
+  title,
+  badge,
+  product,
+  accent,
+}: {
+  title: string;
+  badge: string;
+  product: VendorAnalyticsProduct | null;
+  accent: string;
+}) {
+  return (
+    <View style={styles.productCard}>
+      <View style={styles.productCardHeader}>
+        <View style={[styles.productBadge, { backgroundColor: accent }]}>
+          <Text style={styles.productBadgeText}>{badge}</Text>
+        </View>
+        <Text style={styles.productCardTitle}>{title}</Text>
+      </View>
+      {product ? (
+        <View style={styles.productBody}>
+          {product.image ? (
+            <Image source={{ uri: product.image }} style={styles.productImage} />
+          ) : (
+            <View style={[styles.productImage, styles.productImagePlaceholder]}>
+              <Icon name="inventory-2" size={28} color={colors.darkGray} />
+            </View>
+          )}
+          <View style={styles.productMeta}>
+            <Text style={styles.productName} numberOfLines={2}>
+              {product.name || 'Product'}
+            </Text>
+            <Text style={styles.productStat}>
+              {product.unitsSold} sold · {formatPkr(product.revenue)}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <Text style={styles.emptyProduct}>No sales in this period yet.</Text>
+      )}
+    </View>
+  );
+}
+
+type ReportsStackParamList = {
+  ReportsMain: undefined;
+  AddExpense: undefined;
+};
 
 const Reports = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<ReportsStackParamList>>();
   const screenWidth = Dimensions.get('window').width;
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [overview, setOverview] = useState<ReportsOverview | null>(null);
+  const [analytics, setAnalytics] = useState<VendorAnalytics | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getReportsOverviewApi(6);
-        if (!cancelled) setOverview(data);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load reports.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+    try {
+      const data = await getVendorAnalyticsApi(6);
+      setAnalytics(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load analytics.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  const summaryCards = useMemo(() => {
-    const s = overview?.summaries;
-    return [
-      { label: 'Total Sales', value: s ? `PKR ${formatCompact(s.totalSales)}` : '—', trend: '', up: true },
-      { label: 'New Users', value: s ? formatCompact(s.newUsers) : '—', trend: '', up: true },
-      { label: 'Vendor Approvals', value: s ? String(s.vendorApprovals) : '—', trend: '', up: true },
-      { label: 'Pending Orders', value: s ? String(s.pendingOrders) : '—', trend: '', up: false },
-    ];
-  }, [overview]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const pnl = useMemo(() => {
+    const s = analytics?.summaries;
+    return {
+      sales: s?.totalSales ?? s?.totalRevenue ?? 0,
+      expenses: s?.totalExpenses ?? 0,
+      profit: s?.profit ?? 0,
+    };
+  }, [analytics]);
 
   const lineChartData = useMemo(() => {
-    const labels = overview?.charts?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const sales = clampArr(overview?.charts?.monthlySales, labels.length);
-    const expenses = clampArr(overview?.charts?.monthlyExpenses, labels.length);
+    const labels = analytics?.monthlySales?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const sales =
+      analytics?.monthlySales?.values?.map((v) => Number(v) || 0) || labels.map(() => 0);
+    const expenses =
+      analytics?.monthlyExpenses?.values?.map((v) => Number(v) || 0) || labels.map(() => 0);
+    while (sales.length < labels.length) sales.push(0);
+    while (expenses.length < labels.length) expenses.push(0);
     return {
       labels,
       datasets: [
         {
-          data: sales,
+          data: sales.slice(0, labels.length),
           color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
           strokeWidth: 2,
         },
         {
-          data: expenses,
+          data: expenses.slice(0, labels.length),
           color: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
           strokeWidth: 2,
         },
       ],
-      legend: ['Sales (PKR)', 'Expenses (PKR)'],
+      legend: ['Sales', 'Expenses'],
     };
-  }, [overview]);
+  }, [analytics]);
 
-  const barChartData = useMemo(() => {
-    const labels = overview?.charts?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const data = clampArr(overview?.charts?.userGrowth, labels.length);
-    return { labels, datasets: [{ data }] };
-  }, [overview]);
-
-  const pieData = useMemo(() => {
-    const top = overview?.charts?.topVendors || [];
-    const colorsList = ['#1F2937', '#EA580C', REPORT_BLUE];
-    const normalized = top.slice(0, 3).map((v, idx) => ({
-      name: v.name || `Vendor ${idx + 1}`,
-      value: Number(v.value || 0),
-      color: colorsList[idx] || REPORT_BLUE,
-      legendFontColor: CHART_LABEL_COLOR,
-      legendFontSize: 12,
-    }));
-    if (normalized.length) return normalized;
-    return [
-      { name: '—', value: 1, color: '#E5E7EB', legendFontColor: CHART_LABEL_COLOR, legendFontSize: 12 },
-    ];
-  }, [overview]);
-
-  const handleExport = () => {
-    // TODO: Export reports
+  const handleDeleteExpense = (expense: VendorExpense) => {
+    Alert.alert('Delete expense?', `${formatPkr(expense.amount)} will be removed.`, [
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteVendorExpenseApi(expense._id);
+            await load(true);
+          } catch (e) {
+            Alert.alert('Could not delete', e instanceof Error ? e.message : 'Please try again.');
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -131,11 +202,14 @@ const Reports = () => {
         style={styles.container}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
+        }
       >
         {loading ? (
           <View style={{ paddingVertical: 18, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading reports…</Text>
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading analytics…</Text>
           </View>
         ) : null}
         {error ? (
@@ -144,128 +218,121 @@ const Reports = () => {
           </View>
         ) : null}
 
-        <Text style={styles.sectionTitle}>Overall Summaries</Text>
-        <View style={styles.summaryGrid}>
-          {summaryCards.map((card, index) => (
-            <View key={index} style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{card.label}</Text>
-              <Text style={styles.summaryValue}>{card.value}</Text>
-              {card.trend ? (
-                <Text style={card.up ? styles.trendUp : styles.trendDown}>
-                  {card.up ? '↑ ' : '↓ '}
-                  {card.trend}
+        {!loading ? (
+          <>
+            <Text style={styles.sectionTitle}>Profit & Loss (last 6 months)</Text>
+            <View style={styles.pnlCard}>
+              <View style={styles.pnlRow}>
+                <Text style={styles.pnlLabel}>Sales</Text>
+                <Text style={[styles.pnlValue, { color: REPORT_BLUE }]}>{formatPkr(pnl.sales)}</Text>
+              </View>
+              <View style={styles.pnlRow}>
+                <Text style={styles.pnlLabel}>Expenses</Text>
+                <Text style={[styles.pnlValue, { color: EXPENSE_GRAY }]}>
+                  {formatPkr(pnl.expenses)}
                 </Text>
-              ) : null}
+              </View>
+              <View style={styles.pnlDivider} />
+              <View style={styles.pnlRow}>
+                <Text style={styles.pnlProfitLabel}>Profit</Text>
+                <Text
+                  style={[
+                    styles.pnlProfitValue,
+                    { color: pnl.profit >= 0 ? PROFIT_GREEN : colors.errorRed },
+                  ]}
+                >
+                  {formatPkr(pnl.profit)}
+                </Text>
+              </View>
             </View>
-          ))}
-        </View>
 
-        <Text style={styles.sectionTitle}>Monthly Sales & Expenses</Text>
-        <View style={[styles.chartSection, styles.chartWrapper]}>
-          <LineChart
-            data={lineChartData}
-            width={screenWidth - 32}
-            height={CHART_HEIGHT}
-            chartConfig={chartConfigBase}
-            bezier
-            withDots
-            withInnerLines
-            withOuterLines={false}
-            withVerticalLabels
-            withHorizontalLabels
-            fromZero
-            style={{ marginVertical: 8, borderRadius: 0 }}
-            withVerticalLines={false}
-            withHorizontalLines
-          />
-          <View style={styles.chartLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: REPORT_BLUE }]} />
-              <Text style={styles.legendText}>Sales (PKR)</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#6B7280' }]} />
-              <Text style={styles.legendText}>Expenses (PKR)</Text>
-            </View>
-          </View>
-        </View>
+            <TouchableOpacity
+              style={styles.addExpenseButton}
+              onPress={() => navigation.navigate('AddExpense')}
+              activeOpacity={0.8}
+            >
+              <Icon name="add-circle-outline" size={20} color={colors.white} />
+              <Text style={styles.addExpenseButtonText}>Add expense</Text>
+            </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>User Growth Over Time</Text>
-        <View style={[styles.chartSection, styles.chartWrapper]}>
-          <BarChart
-            data={barChartData}
-            width={screenWidth - 32}
-            height={CHART_HEIGHT}
-            yAxisLabel=""
-            yAxisSuffix=""
-            chartConfig={{
-              ...chartConfigBase,
-              color: (opacity = 1) => `rgba(220, 38, 38, ${opacity})`,
-            }}
-            fromZero
-            style={{ marginVertical: 8, borderRadius: 0 }}
-            withInnerLines={false}
-            barRadius={4}
-          />
-          <View style={styles.chartLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#DC2626' }]} />
-              <Text style={styles.legendText}>New Users</Text>
+            <Text style={styles.sectionTitle}>Monthly Sales & Expenses</Text>
+            <View style={[styles.chartSection, styles.chartWrapper]}>
+              <LineChart
+                data={lineChartData}
+                width={screenWidth - 32}
+                height={CHART_HEIGHT}
+                chartConfig={chartConfigBase}
+                bezier
+                withDots
+                withInnerLines
+                withOuterLines={false}
+                withVerticalLabels
+                withHorizontalLabels
+                fromZero
+                style={{ marginVertical: 8, borderRadius: 0 }}
+                withVerticalLines={false}
+                withHorizontalLines
+                formatYLabel={(v) => formatCompact(Number(v)).replace('PKR ', '')}
+              />
+              <View style={styles.chartLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: REPORT_BLUE }]} />
+                  <Text style={styles.legendText}>Sales</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: EXPENSE_GRAY }]} />
+                  <Text style={styles.legendText}>Expenses</Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
 
-        <Text style={styles.sectionTitle}>Top Vendor Contributions</Text>
-        <View style={[styles.chartSection, styles.chartWrapper]}>
-          <View style={styles.donutWrapper}>
-            <PieChart
-              data={pieData}
-              width={DONUT_SIZE}
-              height={DONUT_SIZE}
-              chartConfig={chartConfigBase}
-              accessor="value"
-              backgroundColor="transparent"
-              paddingLeft="0"
-              center={[DONUT_SIZE / 2, DONUT_SIZE / 2]}
-              absolute
-              hasLegend={false}
+            <Text style={styles.sectionTitle}>Recent Expenses</Text>
+            {(analytics?.recentExpenses || []).length === 0 ? (
+              <Text style={styles.emptyProduct}>No expenses recorded yet. Tap Add expense to start.</Text>
+            ) : (
+              (analytics?.recentExpenses || []).map((expense) => (
+                <View key={expense._id} style={styles.expenseRow}>
+                  <View style={styles.expenseMeta}>
+                    <Text style={styles.expenseCategory}>
+                      {CATEGORY_LABELS[expense.category] || expense.category}
+                    </Text>
+                    <Text style={styles.expenseNote} numberOfLines={1}>
+                      {expense.note ||
+                        new Date(expense.incurredAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                    </Text>
+                  </View>
+                  <Text style={styles.expenseAmount}>{formatPkr(expense.amount)}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteExpense(expense)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Icon name="delete-outline" size={22} color={colors.errorRed} />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Most Sold Product</Text>
+            <ProductHighlightCard
+              title="Highest units sold"
+              badge="Top seller"
+              product={analytics?.mostSoldProduct ?? null}
+              accent="#16A34A"
             />
-            <View
-              style={[
-                styles.donutCenterCircle,
-                {
-                  width: DONUT_CENTER_RADIUS * 2,
-                  height: DONUT_CENTER_RADIUS * 2,
-                  left: DONUT_SIZE / 4 + DONUT_SIZE / 2 - DONUT_CENTER_RADIUS,
-                  top: DONUT_SIZE / 2 - DONUT_CENTER_RADIUS,
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.chartLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#EA580C' }]} />
-              <Text style={styles.legendText}>Vendor B</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: REPORT_BLUE }]} />
-              <Text style={styles.legendText}>Vendor C</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#1F2937' }]} />
-              <Text style={styles.legendText}>Vendor A</Text>
-            </View>
-          </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.exportButton, { marginBottom: insets.bottom + 24 }]}
-          onPress={handleExport}
-          activeOpacity={0.8}
-        >
-          <Icon name="assessment" size={22} color="#FFFFFF" />
-          <Text style={styles.exportButtonText}>Export All Reports</Text>
-        </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Highest Revenue Product</Text>
+            <ProductHighlightCard
+              title="Most revenue earned"
+              badge="Top earner"
+              product={analytics?.highestRevenueProduct ?? null}
+              accent="#EA580C"
+            />
+          </>
+        ) : null}
       </ScrollView>
     </View>
   );

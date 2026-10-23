@@ -23,6 +23,12 @@ export type VendorOrderDetail = {
   shipping: string;
   tax: string;
   total: string;
+  giftWrapping?: boolean;
+  giftWrappingFee?: string;
+  digitalGiftCard?: boolean;
+  digitalGiftCardFee?: string;
+  digitalGiftCardMessage?: string;
+  digitalGiftCardTheme?: string | null;
 };
 
 export type OrderDetailsScreenParams = {

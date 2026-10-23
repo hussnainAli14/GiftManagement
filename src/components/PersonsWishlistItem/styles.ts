@@ -61,7 +61,19 @@ export const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semiBold as '600',
     color: colors.primary,
+    marginBottom: 4,
+  },
+  vendorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginBottom: 6,
+  },
+  vendorName: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.darkGray,
+    flex: 1,
   },
   progressWrapper: {
     marginTop: 0,

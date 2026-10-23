@@ -18,7 +18,11 @@ export type ProductModel = {
   images?: string[];
   price?: number;
   inventory?: number;
+  /** Units sold; used to mark Hot Product. */
+  salesCount?: number;
   category?: string;
+  /** Vendor availability: active | inactive | out_of_stock | discontinued */
+  availabilityStatus?: string;
   createdAt?: string;
 };
 
@@ -106,6 +110,7 @@ export async function createProductApi(vendorId: string, input: {
   inventory?: number;
   category?: string;
   image?: string;
+  availabilityStatus?: string;
 }): Promise<ProductModel> {
   const res = await apiRequest<ProductResponse>(`/products/${vendorId}`, {
     method: 'POST',
@@ -144,6 +149,7 @@ export async function updateProductApi(productId: string, input: {
   price?: number;
   inventory?: number;
   category?: string;
+  availabilityStatus?: string;
 }): Promise<ProductModel> {
   const res = await apiRequest<ProductResponse | ProductModel>(`/products/${productId}`, {
     method: 'PUT',

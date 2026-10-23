@@ -111,8 +111,33 @@ export function navigateFromNotification(
     return;
   }
 
+  if (kind === 'occasion_reminder') {
+    if (d.friendId) {
+      goTab('Friends', 'FriendProfile', {
+        friendId: d.friendId,
+        friendName: d.friendName || 'Friend',
+      });
+    } else {
+      goTab('Events', 'EventsMain');
+    }
+    return;
+  }
+
   if (kind === 'contribution_invite' && d.campaignId) {
     stackNavigate('RespondContributionInvite', { campaignId: d.campaignId });
+    return;
+  }
+
+  if (kind === 'delivery_confirm' && d.orderId) {
+    stackNavigate('ConfirmDeliveryReceipt', {
+      orderId: d.orderId,
+      itemTitle: d.itemTitle,
+    });
+    return;
+  }
+
+  if (kind === 'delivery_confirmed') {
+    goTab('Home', 'MyOrders');
     return;
   }
 
@@ -155,6 +180,16 @@ export function navigateFromNotification(
 
   if (kind === 'wallet_received' || kind === 'wallet_topup') {
     goTab('Profile', 'WalletMain');
+    return;
+  }
+
+  if (kind === 'reward_earned') {
+    goTab('Profile', 'RewardsMain');
+    return;
+  }
+
+  if (kind === 'digital_gift_card') {
+    goTab('Home', 'Notifications');
     return;
   }
 

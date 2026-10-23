@@ -49,6 +49,14 @@ const PersonsWishlistItem: React.FC<PersonsWishlistItemProps> = ({
           {item.description}
         </Text>}
         <Text style={styles.price}>{item.price}</Text>
+        {item.vendorName ? (
+          <View style={styles.vendorRow}>
+            <Icon name="storefront" size={14} color="#6B7280" />
+            <Text style={styles.vendorName} numberOfLines={1}>
+              {item.vendorName}
+            </Text>
+          </View>
+        ) : null}
         {showContributed && (
           <View style={styles.progressWrapper}>
             <ProgressBar

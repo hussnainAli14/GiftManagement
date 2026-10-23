@@ -209,6 +209,29 @@ const OrderDetails = () => {
             <Text style={styles.rowLabel}>Tax</Text>
             <Text style={styles.rowValue}>{detail.tax}</Text>
           </View>
+          {detail.giftWrapping ? (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Gift wrapping</Text>
+              <Text style={styles.rowValue}>{detail.giftWrappingFee || 'Yes'}</Text>
+            </View>
+          ) : null}
+          {detail.digitalGiftCard ? (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Digital gift card</Text>
+              <Text style={styles.rowValue}>
+                {detail.digitalGiftCardFee || 'Yes'}
+                {detail.digitalGiftCardTheme ? ` · ${detail.digitalGiftCardTheme}` : ''}
+              </Text>
+            </View>
+          ) : null}
+          {detail.digitalGiftCard && detail.digitalGiftCardMessage ? (
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Card message</Text>
+              <Text style={[styles.rowValue, { flex: 1, textAlign: 'right' }]} numberOfLines={3}>
+                {detail.digitalGiftCardMessage}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{detail.total}</Text>

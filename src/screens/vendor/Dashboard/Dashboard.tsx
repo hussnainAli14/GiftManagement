@@ -23,6 +23,7 @@ type DashboardStackParamList = {
   DashboardMain: undefined;
   AddProduct: undefined;
   MyProducts: undefined;
+  Users: undefined;
   Allusers: undefined;
 };
 
@@ -110,6 +111,40 @@ const Dashboard = () => {
                 <Text style={styles.trendNeutral}>Unique buyers</Text>
               </View>
             </View>
+
+            {(stats?.lowStockProducts?.length ?? 0) > 0 ? (
+              <View style={styles.lowStockSection}>
+                <View style={styles.lowStockHeader}>
+                  <Text style={styles.lowStockTitle}>⚠ Low Stock</Text>
+                  <Text style={styles.lowStockHint}>
+                    {stats?.lowStockProducts?.length} product
+                    {(stats?.lowStockProducts?.length ?? 0) === 1 ? '' : 's'} ≤{' '}
+                    {stats?.lowStockThreshold ?? 5}
+                  </Text>
+                </View>
+                {stats?.lowStockProducts?.map((item) => (
+                  <TouchableOpacity
+                    key={item.productId}
+                    style={styles.lowStockCard}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('MyProducts')}
+                  >
+                    <View style={styles.lowStockIconWrap}>
+                      <Icon name="warning" size={22} color="#B45309" />
+                    </View>
+                    <View style={styles.lowStockBody}>
+                      <Text style={styles.lowStockName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.lowStockRemaining}>
+                        Remaining: {item.remaining}
+                      </Text>
+                    </View>
+                    <Icon name="chevron-right" size={22} color="#B45309" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
           </>
         )}
 
@@ -128,6 +163,14 @@ const Dashboard = () => {
         >
           <Icon name="inventory-2" size={22} color={colors.white} style={styles.buttonIcon} />
           <Text style={styles.actionButtonText}>View All Products</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.actionButtonInner]}
+          onPress={() => navigation.navigate('Users')}
+          activeOpacity={0.8}
+        >
+          <Icon name="people" size={22} color={colors.white} style={styles.buttonIcon} />
+          <Text style={styles.actionButtonText}>Users</Text>
         </TouchableOpacity>
         {/* <TouchableOpacity
           style={[styles.actionButton, styles.actionButtonInner]}

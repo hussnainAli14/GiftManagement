@@ -62,10 +62,6 @@ const AddItem = () => {
   };
 
   const handleSave = useCallback(async () => {
-    if (!eventId) {
-      Alert.alert('Missing event', 'No event selected.');
-      return;
-    }
     if (!itemName.trim() || !price.trim()) {
       Alert.alert('Missing fields', 'Please add item name and price.');
       return;

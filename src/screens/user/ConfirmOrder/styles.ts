@@ -73,14 +73,26 @@ export const styles = StyleSheet.create({
     color: colors.black,
     flex: 1,
   },
-  deliveryHint: {
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  infoLabel: {
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.fontSize.sm,
     color: colors.darkGray,
-    marginBottom: 12,
+    width: 44,
   },
-  inputContainer: {
-    marginBottom: 12,
+  infoValue: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.black,
+    flex: 1,
+  },
+  detailsLoader: {
+    marginVertical: 8,
   },
   priceRow: {
     flexDirection: 'row',
@@ -118,6 +130,135 @@ export const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold as '700',
     color: colors.primary,
+  },
+  couponCard: {
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: colors.lightGray,
+  },
+  couponCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+  },
+  wrapCard: {
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: colors.lightGray,
+  },
+  wrapCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
+  },
+  wrapBadge: {
+    backgroundColor: colors.primary,
+  },
+  digitalCardBadge: {
+    backgroundColor: '#7C3AED',
+  },
+  digitalCardExtras: {
+    marginTop: 14,
+  },
+  themeLabel: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.fontSize.sm,
+    color: colors.black,
+    marginBottom: 8,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  themeChip: {
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: colors.white,
+  },
+  themeChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  themeChipText: {
+    fontFamily: typography.fontFamily.medium,
+    fontSize: typography.fontSize.xs,
+    color: colors.black,
+  },
+  themeChipTextActive: {
+    color: colors.white,
+  },
+  digitalMessageInput: {
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 88,
+    textAlignVertical: 'top',
+    backgroundColor: colors.white,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.black,
+  },
+  couponHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  couponBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  couponTitle: {
+    fontFamily: typography.fontFamily.bold,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold as '700',
+    color: colors.black,
+    marginBottom: 2,
+  },
+  couponSubtitle: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.xs,
+    color: colors.darkGray,
+  },
+  couponHint: {
+    marginTop: 10,
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+  },
+  couponEmpty: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  discountLabel: {
+    fontFamily: typography.fontFamily.regular,
+    fontSize: typography.fontSize.sm,
+    color: colors.successGreen,
+    flex: 1,
+    marginRight: 8,
+  },
+  discountValue: {
+    fontFamily: typography.fontFamily.bold,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold as '700',
+    color: colors.successGreen,
   },
   proceedButton: {
     marginTop: 8,

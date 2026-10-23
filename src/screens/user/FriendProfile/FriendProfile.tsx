@@ -24,9 +24,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { getUserByIdApi } from '../../../api/userApi';
 import type { UserProfile } from '../../../api/userApi';
 import { getEventsByUserApi, type EventModel } from '../../../api/eventApi';
-import { getWishlistByEventApi } from '../../../api/wishlistApi';
+import { getWishlistByEventApi, getWishlistByUserApi } from '../../../api/wishlistApi';
 import { filterAvailableWishlistItems } from '../../../utils/isWishlistItemAvailable';
-import type { WishlistItemModel } from '../../../api/wishlistApi';
+import type { WishlistItemModel, WishlistModel } from '../../../api/wishlistApi';
+import type { PersonsWishlistItemData } from '../../../components/PersonsWishlistItem';
+import { normalizeUserId } from '../../../utils/normalizeUserId';
 import { getGiftHistoryWithUserApi } from '../../../api/orderApi';
 import type { OrderModel } from '../../../api/orderApi';
 import { API_ORIGIN } from '../../../api/config';
@@ -88,6 +90,66 @@ function wishlistItemToCard(it: WishlistItemModel, seed: string): WishlistItemTy
   };
 }
 
+function wishlistItemToGiftData(it: WishlistItemModel, seed: string): PersonsWishlistItemData {
+  const price =
+    typeof it.price === 'number' && !Number.isNaN(it.price)
+      ? `PKR ${it.price.toLocaleString('en-PK')}`
+      : 'PKR 0';
+  const id = typeof it._id === 'string' ? it._id : seed;
+  const target = it.contributionTarget ?? it.price ?? 0;
+  const progress = it.contributionProgress ?? 0;
+  const contributedPercent = target
+    ? Math.round(Math.max(0, Math.min(100, (progress / target) * 100)))
+    : 0;
+
+  return {
+    id,
+    title: it.title || 'Wishlist item',
+    description: it.description ?? '',
+    price,
+    image: resolveWishlistImageUrl(it.image, id),
+    contributedPercent,
+    contributionTarget: target,
+    contributionProgress: progress,
+    category: it.category,
+    vendorName: it.vendorName,
+  };
+}
+
+type FriendWishlistEntry = {
+  card: WishlistItemType;
+  giftItem: PersonsWishlistItemData;
+};
+
+function appendFriendWishlistItems(
+  wishlist: WishlistModel | null,
+  friendId: string,
+  seen: Set<string>,
+  flat: FriendWishlistEntry[],
+  seedPrefix: string,
+) {
+  if (!wishlist?.items?.length) return;
+
+  const owner = normalizeUserId(wishlist.userId);
+  if (owner !== friendId) return;
+
+  // Personal favorites stay visible even after they have been gifted.
+  const sourceItems =
+    seedPrefix === 'personal'
+      ? wishlist.items
+      : filterAvailableWishlistItems(wishlist.items);
+
+  sourceItems.forEach((it: WishlistItemModel, j: number) => {
+    const id = typeof it._id === 'string' ? it._id : `${seedPrefix}-${j}`;
+    if (seen.has(id)) return;
+    seen.add(id);
+    flat.push({
+      card: wishlistItemToCard(it, id),
+      giftItem: wishlistItemToGiftData(it, id),
+    });
+  });
+}
+
 function orderToGiftHistory(o: OrderModel, currentUserId: string): GiftHistoryItemType | null {
   if (!o.recipientId) return null;
 
@@ -133,7 +195,7 @@ const FriendProfile = () => {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [events, setEvents] = useState<HorizontalEvent[]>([]);
-  const [wishlistCards, setWishlistCards] = useState<WishlistItemType[]>([]);
+  const [wishlistEntries, setWishlistEntries] = useState<FriendWishlistEntry[]>([]);
   const [giftHistory, setGiftHistory] = useState<GiftHistoryItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,31 +259,24 @@ const FriendProfile = () => {
 
       const wishIds = (evs ?? []).map((e) => e._id).slice(0, 20);
       let wishResults: (Awaited<ReturnType<typeof getWishlistByEventApi>> | null)[] = [];
+      let personalWishlist: Awaited<ReturnType<typeof getWishlistByUserApi>> | null = null;
       try {
-        wishResults = await Promise.all(
-          wishIds.map((eventId) => getWishlistByEventApi(eventId).catch(() => null))
-        );
+        [personalWishlist, ...wishResults] = await Promise.all([
+          getWishlistByUserApi(friendId).catch(() => null),
+          ...wishIds.map((eventId) => getWishlistByEventApi(eventId).catch(() => null)),
+        ]);
       } catch {
         wishResults = [];
+        personalWishlist = null;
       }
 
-      const flat: WishlistItemType[] = [];
+      const flat: FriendWishlistEntry[] = [];
       const seen = new Set<string>();
+      appendFriendWishlistItems(personalWishlist, friendId, seen, flat, 'personal');
       wishResults.forEach((wl, idx) => {
-        if (!wl?.items?.length) return;
-        const owner =
-          typeof wl.userId === 'object' && wl.userId && '_id' in wl.userId
-            ? String((wl.userId as { _id: string })._id)
-            : String(wl.userId ?? '');
-        if (owner !== friendId) return;
-        filterAvailableWishlistItems(wl.items).forEach((it: WishlistItemModel, j: number) => {
-          const id = typeof it._id === 'string' ? it._id : `i-${idx}-${j}`;
-          if (seen.has(id)) return;
-          seen.add(id);
-          flat.push(wishlistItemToCard(it, id));
-        });
+        appendFriendWishlistItems(wl, friendId, seen, flat, `event-${idx}`);
       });
-      setWishlistCards(flat.slice(0, 24));
+      setWishlistEntries(flat.slice(0, 24));
 
       const gifts = me
         ? (orders ?? [])
@@ -233,7 +288,7 @@ const FriendProfile = () => {
       setError(e instanceof Error ? e.message : 'Could not load profile.');
       setProfile(null);
       setEvents([]);
-      setWishlistCards([]);
+      setWishlistEntries([]);
       setGiftHistory([]);
     } finally {
       setLoading(false);
@@ -250,8 +305,36 @@ const FriendProfile = () => {
     // Navigate to full list when that flow exists
   };
 
+  const handleSendGift = () => {
+    navigation.getParent()?.navigate('Home', {
+      screen: 'PersonsWishlist',
+      params: {
+        userId: friendId,
+        eventTitle: `${displayName}'s Favorite Products`,
+      },
+    });
+  };
+
   const handleViewAllWishlists = () => {
-    // Navigate to full list when that flow exists
+    navigation.getParent()?.navigate('Home', {
+      screen: 'PersonsWishlist',
+      params: {
+        userId: friendId,
+        eventTitle: `${displayName}'s Favorite Products`,
+      },
+    });
+  };
+
+  const handleWishlistPress = (entry: FriendWishlistEntry) => {
+    navigation.getParent()?.navigate('Events', {
+      screen: 'GiftOptions',
+      params: {
+        item: entry.giftItem,
+        eventTitle: `${displayName}'s Wishlist`,
+        wishlistOwnerId: friendId,
+        eventOwnerId: friendId,
+      },
+    });
   };
 
   const handleMessagePress = () => {
@@ -270,8 +353,8 @@ const FriendProfile = () => {
     <HorizontalEventCard event={item} />
   );
 
-  const renderWishlist = ({ item }: { item: WishlistItemType }) => (
-    <WishlistItem item={item} />
+  const renderWishlist = ({ item }: { item: FriendWishlistEntry }) => (
+    <WishlistItem item={item.card} onPress={() => handleWishlistPress(item)} />
   );
 
   const renderGiftHistory = ({ item }: { item: GiftHistoryItemType }) => (
@@ -318,6 +401,13 @@ const FriendProfile = () => {
               <Text style={styles.messageButtonText}>Message</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              style={styles.sendGiftButton}
+              onPress={handleSendGift}
+            >
+              <Icon name="card-giftcard" size={20} color={colors.white} />
+              <Text style={styles.messageButtonText}>Send Gift</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.moreButton}
               onPress={handleMoreOptionsPress}
             >
@@ -349,18 +439,18 @@ const FriendProfile = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Wishlists</Text>
+            <Text style={styles.sectionTitle}>Favorite Products</Text>
             <TouchableOpacity onPress={handleViewAllWishlists}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {wishlistCards.length === 0 ? (
-            <Text style={styles.emptyHint}>No wishlist items to show yet.</Text>
+          {wishlistEntries.length === 0 ? (
+            <Text style={styles.emptyHint}>No favorite products to show yet.</Text>
           ) : (
             <FlatList
-              data={wishlistCards}
+              data={wishlistEntries}
               renderItem={renderWishlist}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.card.id}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}

@@ -116,14 +116,68 @@ export const styles = StyleSheet.create({
   row: {
     marginBottom: 12,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   label: {
     ...typography.textStyles.caption,
     color: colors.textSecondary,
     marginBottom: 4,
   },
+  editIconButton: {
+    padding: 4,
+  },
   value: {
     ...typography.textStyles.bodySmall,
     color: colors.black,
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    ...typography.textStyles.bodySmall,
+    color: colors.black,
+    backgroundColor: colors.white,
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 10,
+  },
+  cancelButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderGray,
+    backgroundColor: colors.white,
+  },
+  cancelButtonText: {
+    ...typography.textStyles.bodySmall,
+    color: colors.darkGray,
+    fontWeight: '600',
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: VENDOR_BLUE,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    ...typography.textStyles.bodySmall,
+    color: colors.white,
+    fontWeight: '700',
   },
   tipCard: {
     flexDirection: 'row',
